@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
-    <File Path="build/Directory.Build.props" />
-    <File Path="build/Directory.Packages.props" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
   </Folder>
   <Project Path="src/WideEvents.Abstractions/WideEvents.Abstractions.csproj" />
   <Project Path="src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />

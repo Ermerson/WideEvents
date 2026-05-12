@@ -1,11 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-
-    <Import Project="../../build/Directory.Packages.props" />
+    <!-- Global configuration from Directory.Build.props and Directory.Packages.props in root -->
 
 </Project>
