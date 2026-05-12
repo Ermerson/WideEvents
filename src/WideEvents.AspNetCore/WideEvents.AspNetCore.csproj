@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <Import Project="../../build/Directory.Packages.props" />
+
+    <ItemGroup>
+      <ProjectReference Include="..\WideEvents.Core\WideEvents.Core.csproj" />
+    </ItemGroup>
+
+</Project>
