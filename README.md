@@ -10,6 +10,15 @@ The goal is simple:
 
 ---
 
+# Documentation
+
+Full documentation lives in [`docs/`](docs/), available in English and Portuguese:
+
+- [English](docs/en-US/README.md)
+- [Português (Brasil)](docs/pt-BR/README.md)
+
+---
+
 # Why WideEvents Exists
 
 Traditional logging was designed for monoliths and local debugging.
