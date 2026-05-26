@@ -2,8 +2,4 @@
 
     <!-- Global configuration from Directory.Build.props and Directory.Packages.props in root -->
 
-    <ItemGroup>
-      <ProjectReference Include="..\WideEvents.Abstractions\WideEvents.Abstractions.csproj" />
-    </ItemGroup>
-
 </Project>

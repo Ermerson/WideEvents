@@ -1,8 +1,9 @@
 using System.Diagnostics;
+using WideEvents.Abstractions;
 
 namespace WideEvents.Core.Context;
 
-public sealed class WideEventContext
+public sealed class WideEventContext : IWideEventContext
 {
     private readonly Dictionary<string, object?> _attributes = new();
 
