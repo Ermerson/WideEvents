@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- Global configuration from Directory.Build.props and Directory.Packages.props in root -->
+
+    <PropertyGroup>
+        <PackageDescription>Wide events / canonical log lines for .NET. Accumulate context across a unit of work and emit a single rich, structured event at the end. Includes AsyncLocal context management, dotted-key expansion into nested objects, and automatic Activity trace correlation (trace_id, span_id, trace_flags).</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\WideEvents.Abstractions\WideEvents.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

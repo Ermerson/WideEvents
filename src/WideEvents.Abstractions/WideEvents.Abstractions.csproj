@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- Global configuration from Directory.Build.props and Directory.Packages.props in root -->
+
+    <PropertyGroup>
+        <PackageDescription>Core abstractions for WideEvents — wide events / canonical log lines for .NET. Defines IWideEventContext and IWideEventExporter so exporter packages can target a stable contract without depending on the core implementation.</PackageDescription>
+    </PropertyGroup>
+
+</Project>

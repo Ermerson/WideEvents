@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- Global configuration from Directory.Build.props and Directory.Packages.props in root -->
+
+    <PropertyGroup>
+        <PackageDescription>ASP.NET Core integration for WideEvents. Adds middleware that captures HTTP request/response context (method, path, status code, duration) and emits one wide event per request via ILogger.</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <FrameworkReference Include="Microsoft.AspNetCore.App" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\WideEvents.Core\WideEvents.Core.csproj" />
+    </ItemGroup>
+
+</Project>
