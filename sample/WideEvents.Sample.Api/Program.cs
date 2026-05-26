@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using Serilog;
-using Serilog.Formatting.Compact;
+using Serilog.Events;
 using WideEvents.AspNetCore;
 using WideEvents.Core.Context;
+using WideEvents.Sample.Api;
 
 // Populate Activity.Current so the wide event picks up trace_id/span_id
 // without wiring a full OpenTelemetry pipeline in this sample.
@@ -15,7 +16,11 @@ ActivitySource.AddActivityListener(new ActivityListener
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((_, logging) =>
-    logging.WriteTo.Console(new CompactJsonFormatter()));
+    logging
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+        .WriteTo.Console(new PrettyJsonFormatter()));
 
 var app = builder.Build();
 
