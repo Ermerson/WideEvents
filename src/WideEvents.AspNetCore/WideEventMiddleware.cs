@@ -23,7 +23,7 @@ public sealed class WideEventMiddleware
         try
         {
             WideEvent.Add("http.method", context.Request.Method);
-            WideEvent.Add("http.path", context.Request.Path);
+            WideEvent.Add("http.path", context.Request.Path.Value);
 
             await _next(context);
             
