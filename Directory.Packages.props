@@ -28,6 +28,9 @@
 
     <!-- Code Analysis -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
+
+    <!-- Sample -->
+    <PackageVersion Include="Serilog.AspNetCore" Version="8.0.3" />
   </ItemGroup>
 </Project>
 
