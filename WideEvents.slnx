@@ -3,7 +3,7 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Project Path="src/WideEvents.Abstractions/WideEvents.Abstractions.csproj" />
   <Project Path="src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />
   <Project Path="src/WideEvents.Core/WideEvents.Core.csproj" />
+  <Project Path="tests/WideEvents.Core.Tests/WideEvents.Core.Tests.csproj" />
 </Solution>

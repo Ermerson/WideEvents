@@ -24,8 +24,7 @@ public sealed class WideEventMiddleware
         {
             WideEvent.Add("http.method", context.Request.Method);
             WideEvent.Add("http.path", context.Request.Path);
-            WideEvent.Add("http.path", context.Request.Path);
-         
+
             await _next(context);
             
             WideEvent.Add("http.status_code", context.Response.StatusCode);

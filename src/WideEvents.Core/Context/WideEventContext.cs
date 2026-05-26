@@ -1,27 +1,57 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace WideEvents.Core.Context;
 
 public sealed class WideEventContext
 {
-    private readonly Dictionary<string, object?> _events = new();
-    
-    public void Add(string name, object? @event)
+    private readonly Dictionary<string, object?> _attributes = new();
+
+    public void Add(string name, object? value)
     {
-        if (@event is not null) 
-            _events.Add(name, @event);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        if (value is not null)
+            _attributes[name] = value;
     }
 
     public IReadOnlyDictionary<string, object?> Build()
     {
+        var root = new Dictionary<string, object?>();
+
+        foreach (var (key, value) in _attributes)
+            SetNested(root, key, value);
+
         var activity = Activity.Current;
-        
-        if (activity is null) return _events;
-        
-        _events["trace_id"] = activity.TraceId;
-        _events["span_id"] = activity.SpanId;
-        _events["trace_flags"] = activity.ActivityTraceFlags;
-        
-        return _events;
+        if (activity is not null)
+        {
+            root["trace_id"] = activity.TraceId.ToString();
+            root["span_id"] = activity.SpanId.ToString();
+            root["trace_flags"] = activity.ActivityTraceFlags.ToString();
+        }
+
+        return root;
+    }
+
+    private static void SetNested(Dictionary<string, object?> root, string key, object? value)
+    {
+        var segments = key.Split('.');
+        var current = root;
+
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (current.TryGetValue(segments[i], out var existing)
+                && existing is Dictionary<string, object?> child)
+            {
+                current = child;
+            }
+            else
+            {
+                var created = new Dictionary<string, object?>();
+                current[segments[i]] = created;
+                current = created;
+            }
+        }
+
+        current[segments[^1]] = value;
     }
 }
