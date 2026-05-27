@@ -22,22 +22,17 @@ and emit it once.
 
 ## Requirements
 
-- .NET 10 SDK — every project targets `net10.0`.
+- .NET 8 SDK or later — packages target `net8.0` and `net10.0`.
 
 ## Installation
 
-The packages are **not published to NuGet yet**. Reference the projects directly.
-Referencing `WideEvents.AspNetCore` transitively brings in `WideEvents.Core` and
-`WideEvents.Abstractions`:
+```bash
+# ASP.NET Core apps (brings in Core and Abstractions transitively)
+dotnet add package WideEvents.AspNetCore
 
-```xml
-<ItemGroup>
-  <ProjectReference Include="../WideEvents/src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />
-</ItemGroup>
+# Non-web or console apps
+dotnet add package WideEvents.Core
 ```
-
-Alternatively, `dotnet pack` produces local `WideEvents.*.1.0.0.nupkg` files you
-can consume from a local feed.
 
 ## Quick start (ASP.NET Core)
 

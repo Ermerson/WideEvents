@@ -22,22 +22,17 @@ em um único evento estruturado e rico, e o emite uma única vez.
 
 ## Requisitos
 
-- .NET 10 SDK — todos os projetos têm como alvo `net10.0`.
+- .NET 8 SDK ou superior — os pacotes têm como alvo `net8.0` e `net10.0`.
 
 ## Instalação
 
-Os pacotes **ainda não estão publicados no NuGet**. Referencie os projetos
-diretamente. Referenciar `WideEvents.AspNetCore` traz, de forma transitiva,
-`WideEvents.Core` e `WideEvents.Abstractions`:
+```bash
+# Apps ASP.NET Core (traz Core e Abstractions de forma transitiva)
+dotnet add package WideEvents.AspNetCore
 
-```xml
-<ItemGroup>
-  <ProjectReference Include="../WideEvents/src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />
-</ItemGroup>
+# Apps sem web ou console
+dotnet add package WideEvents.Core
 ```
-
-Como alternativa, `dotnet pack` gera arquivos locais `WideEvents.*.1.0.0.nupkg`
-que você pode consumir a partir de um feed local.
 
 ## Início rápido (ASP.NET Core)
 

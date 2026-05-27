@@ -1,95 +1,41 @@
 # WideEvents
 
-WideEvents is a high-performance structured logging and observability framework for .NET focused on **Wide Events** and **Canonical Log Lines**.
+WideEvents is a .NET library for **wide events** (also known as *canonical log lines*).
 
-Instead of producing dozens of fragmented logs during a request lifecycle, WideEvents captures a single rich, structured event containing operational, technical, and business context.
+Instead of scattering many log lines across a request, you accumulate context into a single rich, structured event and emit it once at the end.
 
-The goal is simple:
-
-> Make production systems easier to understand, debug, query, and observe.
+> Heavily inspired by [loggingsucks.com](https://loggingsucks.com/) and [Stripe's canonical log lines](https://stripe.com/blog/canonical-log-lines).
 
 ---
 
-# Documentation
+## The problem
 
-Full documentation lives in [`docs/`](docs/), available in English and Portuguese:
-
-- [English](docs/en-US/README.md)
-- [Português (Brasil)](docs/pt-BR/README.md)
-
----
-
-# Why WideEvents Exists
-
-Traditional logging was designed for monoliths and local debugging.
-
-Modern distributed systems generate:
-
-* fragmented logs
-* duplicated context
-* expensive correlation
-* noisy observability pipelines
-
-A single HTTP request may produce:
-
-* controller logs
-* service logs
-* database logs
-* retry logs
-* integration logs
-* exception logs
-
-Reconstructing what happened becomes operational archaeology.
-
-WideEvents changes the model:
-
-Instead of logging every step, emit a single canonical event describing the complete outcome of the request.
-
----
-
-# Example
-
-Instead of:
+A single HTTP request typically produces:
 
 ```text
 Request started
-Loading cart
-Calling payment provider
-Retrying payment
-Payment failed
-Request finished
+Loading cart for user_456
+Calling payment provider stripe
+Retrying payment (attempt 2)
+Payment failed: card_declined
+Request finished with 500
 ```
 
-WideEvents produces:
+Six lines. Fragmented context. Expensive to correlate.
+
+## The solution
+
+WideEvents accumulates all context and emits one structured event:
 
 ```json
 {
-  "duration_ms": 1247,
-  "status_code": 500,
-  "outcome": "error",
-
-  "payment": {
-    "method": "card",
-    "provider": "stripe"
-  },
-
-  "error": {
-    "type": "PaymentError",
-    "code": "card_declined"
-  },
-
-  "cart": {
-    "id": "cart_xyz",
-    "total_cents": 15999
-  },
-
-  "user": {
-    "id": "user_456",
-    "subscription": "premium"
-  },
-
-  "trace_id": "7d3b9c5f7b",
-  "request_id": "req_8bf7ec2d"
+  "http":     { "method": "GET", "path": "/checkout/user_456", "status_code": 200 },
+  "user":     { "id": "user_456" },
+  "payment":  { "method": "card", "provider": "stripe" },
+  "duration_ms": 29.52,
+  "trace_id": "23ca1dc84f7b4cc4b44b7717ca231c2b",
+  "span_id":  "2454b21b523f02f4",
+  "trace_flags": "None"
 }
 ```
 
@@ -97,110 +43,68 @@ One event. Full context.
 
 ---
 
-# Features
+## Packages
 
-* Structured wide events
-* Canonical log lines
-* OpenTelemetry integration
-* Automatic trace/span correlation
-* Structured nested JSON output
-* Adaptive sampling
-* PII masking/sanitization
-* Async exporter pipeline
-* Source-generated schemas
-* Minimal allocations
-* Extensible exporters
-* ASP.NET Core middleware
-* Kafka-ready architecture
-* High-throughput serialization options
+| Package | Description |
+|---|---|
+| `WideEvents.Abstractions` | `IWideEventContext` and `IWideEventExporter` contracts. |
+| `WideEvents.Core` | `WideEvent` static accumulator and `WideEventContext`. |
+| `WideEvents.AspNetCore` | Middleware that emits one wide event per HTTP request. |
+
+Targets `net8.0` and `net10.0`.
 
 ---
 
-# Architecture
-
-```text
-HTTP Request
-     ↓
-Middleware
-     ↓
-Scopes + Activity Context
-     ↓
-Wide Event Builder
-     ↓
-Structured Event
-     ↓
-Export Pipeline
-```
-
-WideEvents integrates with:
-
-* ILogger
-* OpenTelemetry
-* Serilog
-* OTLP collectors
-* Kafka pipelines
-* Structured JSON logging platforms
-
----
-
-# Installation
-
-## Core
+## Installation
 
 ```bash
+# ASP.NET Core apps (brings in Core and Abstractions transitively)
+dotnet add package WideEvents.AspNetCore
+
+# Non-web or console apps
 dotnet add package WideEvents.Core
 ```
 
-## ASP.NET Core Integration
-
-```bash
-dotnet add package WideEvents.AspNetCore
-```
-
-## OpenTelemetry Integration
-
-```bash
-dotnet add package WideEvents.OpenTelemetry
-```
-
 ---
 
-# Quick Start
+## Quick start (ASP.NET Core)
 
-## Register services
+Register the middleware and call `WideEvent.Add` anywhere in the request pipeline:
 
 ```csharp
-builder.Services.AddWideEvents(options =>
+using WideEvents.AspNetCore;
+using WideEvents.Core.Context;
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseWideEvents(); // emit one wide event per request
+
+app.MapGet("/checkout/{userId}", (string userId) =>
 {
-    options.EnableOpenTelemetry = true;
+    WideEvent.Add("user.id", userId);
+    WideEvent.Add("payment.method", "card");
+    WideEvent.Add("payment.provider", "stripe");
+    return Results.Ok();
 });
+
+app.Run();
 ```
 
-## Enable middleware
+The middleware automatically adds `http.method`, `http.path`, `http.status_code`, `duration_ms`, and — when `Activity.Current` is set — `trace_id`, `span_id`, `trace_flags`.
 
-```csharp
-app.UseWideEvents();
-```
-
-## Add contextual data
-
-```csharp
-WideEvent.Add("user.id", user.Id);
-WideEvent.Add("cart.total_cents", cart.TotalCents);
-```
+On unhandled exceptions it captures `error.type` and `error.message` instead of `http.status_code`.
 
 ---
 
-# Structured Events
+## Dotted keys → nested JSON
 
-WideEvents supports hierarchical structured events.
+Dotted key names are expanded into nested objects when the event is built:
 
 ```csharp
 WideEvent.Add("payment.method", "card");
 WideEvent.Add("payment.provider", "stripe");
 ```
-
-Produces:
 
 ```json
 {
@@ -211,71 +115,51 @@ Produces:
 }
 ```
 
+Duplicate keys overwrite the previous value. `null` values are ignored. Empty or whitespace keys throw `ArgumentException`.
+
 ---
 
-# OpenTelemetry
-
-WideEvents automatically integrates with OpenTelemetry Activities.
-
-Captured automatically:
-
-* trace_id
-* span_id
-* activity tags
-
-Example:
+## Using without ASP.NET Core
 
 ```csharp
-builder.Services.AddWideEvents(options =>
-{
-    options.EnableOpenTelemetry = true;
-});
+using WideEvents.Core.Context;
+
+WideEvent.Add("job.name", "invoice-sync");
+WideEvent.Add("job.records", 142);
+
+var evt = WideEvent.Current.Build(); // IReadOnlyDictionary<string, object?>
+// ... send evt to your logger or exporter
+
+WideEvent.Reset();
 ```
 
 ---
 
-# Source Generated Schemas
+## Structured log output
 
-Define strongly typed event schemas.
-
-```csharp
-[WideEventSchema]
-public partial record CheckoutEvent
-{
-    public string UserId { get; init; }
-    public decimal Total { get; init; }
-}
-```
-
-Generated automatically:
+The middleware logs via `ILogger` using `{@WideEvent}`. The default .NET console logger serializes dictionaries as `ToString()` — to get proper nested JSON you need a structured logger that supports destructuring, such as **Serilog**:
 
 ```csharp
-event.Enrich();
+builder.Host.UseSerilog((ctx, lc) => lc
+    .WriteTo.Console(new PrettyJsonFormatter()));
 ```
 
-No reflection required.
+A runnable sample with Serilog lives in [`sample/WideEvents.Sample.Api`](sample/WideEvents.Sample.Api).
 
 ---
 
-# Exporters
+## Custom exporters
 
-WideEvents supports asynchronous exporters.
-
-Current architecture supports:
-
-* OpenTelemetry / OTLP
-* Kafka
-* Custom exporters
-
-Example:
+`IWideEventExporter` is the contract for custom destinations. It is not consumed by the middleware yet — today the middleware emits via `ILogger`. The interface exists so exporter packages can build against a stable contract:
 
 ```csharp
 public class MyExporter : IWideEventExporter
 {
     public Task ExportAsync(
-        IReadOnlyDictionary<string, object?> evt,
-        CancellationToken ct)
+        IReadOnlyDictionary<string, object?> wideEvent,
+        CancellationToken cancellationToken = default)
     {
+        // send to OTLP, Kafka, ClickHouse, stdout, ...
         return Task.CompletedTask;
     }
 }
@@ -283,131 +167,15 @@ public class MyExporter : IWideEventExporter
 
 ---
 
-# Performance
+## Documentation
 
-WideEvents was designed with performance as a first-class concern.
+Full documentation in [`docs/`](docs/):
 
-Available serialization modes:
-
-* Source-generated `System.Text.Json`
-* Span-based pooled JSON writer
-* Minimal allocation pipelines
-
-The framework avoids:
-
-* runtime reflection
-* blocking I/O
-* synchronous exporters
-* unnecessary allocations
+- [English](docs/en-US/README.md)
+- [Português (Brasil)](docs/pt-BR/README.md)
 
 ---
 
-# Sampling
+## License
 
-WideEvents supports adaptive sampling.
-
-Example policy:
-
-* always keep errors
-* always keep slow requests
-* probabilistic sampling for successful requests
-
----
-
-# Data Governance
-
-WideEvents includes sanitization hooks for:
-
-* PII masking
-* sensitive field filtering
-* compliance strategies
-
-These capabilities are essential for modern observability pipelines where logs may contain business, customer, or regulated data.
-
-Typical use cases include:
-
-* GDPR compliance
-* PCI DSS environments
-* internal security policies
-* audit and governance requirements
-* multi-tenant SaaS platforms
-
-WideEvents allows organizations to centralize sanitization policies before events reach external systems such as Kafka, OTLP collectors, SIEMs, or analytics platforms.
-
-Example:
-
-```json
-{
-  "user": {
-    "email": "***"
-  }
-}
-```
-
----
-
-# Philosophy
-
-WideEvents is not "just logging".
-
-It treats observability as structured operational data.
-
-The framework is heavily inspired by:
-
-* Canonical Log Lines
-* Wide Events
-* Modern distributed observability practices
-* High-cardinality event pipelines
-* [https://loggingsucks.com/](https://loggingsucks.com/)
-* [https://stripe.com/blog/canonical-log-lines](https://stripe.com/blog/canonical-log-lines)
-
----
-
-# Roadmap
-
-WideEvents is being designed as a long-term observability platform for modern .NET systems.
-
-Planned evolutions include:
-
-## Observability
-
-* ClickHouse exporter
-* Loki integration
-* Metrics integration
-* Dashboard templates
-* Native OpenTelemetry Logs support
-
-## Performance
-
-* Native AOT optimizations
-* Zero-allocation serialization pipelines
-* Advanced pooling strategies
-* Benchmark suite
-
-## Governance
-
-* Dynamic sampling
-* Schema registry
-* Centralized masking policies
-* Compliance-aware exporters
-
-## Developer Experience
-
-* Roslyn analyzers
-* `dotnet new` templates
-* Visual Studio tooling
-* Event schema validation
-
----
-
-# Contributing
-
-Contributions, ideas, discussions, and experiments are welcome.
-
-This project is focused on building practical observability tooling for modern .NET systems.
-
----
-
-# License
-
-Licensed under the Apache License 2.0.
+Licensed under the [MIT License](https://opensource.org/licenses/MIT).
