@@ -1,4 +1,4 @@
-﻿namespace WideEvents.Core.Context;
+namespace WideEvents.Core.Enrichers;
 
 public interface IWideEventEnricher
 {

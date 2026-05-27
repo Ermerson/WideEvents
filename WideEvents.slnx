@@ -7,5 +7,6 @@
   <Project Path="src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />
   <Project Path="src/WideEvents.Core/WideEvents.Core.csproj" />
   <Project Path="tests/WideEvents.Core.Tests/WideEvents.Core.Tests.csproj" />
+  <Project Path="tests/WideEvents.AspNetCore.Tests/WideEvents.AspNetCore.Tests.csproj" />
   <Project Path="sample/WideEvents.Sample.Api/WideEvents.Sample.Api.csproj" />
 </Solution>

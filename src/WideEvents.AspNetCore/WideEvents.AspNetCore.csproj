@@ -8,6 +8,9 @@
 
     <ItemGroup>
       <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>WideEvents.AspNetCore.Tests</_Parameter1>
+    </AssemblyAttribute>
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
 

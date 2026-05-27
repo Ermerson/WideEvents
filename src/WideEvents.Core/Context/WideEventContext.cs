@@ -10,7 +10,8 @@ public sealed class WideEventContext : IWideEventContext
     private readonly IReadOnlyList<IWideEventEnricher> _enrichers;
     
     public WideEventContext(IEnumerable<IWideEventEnricher>? enrichers = null)
-     => _enrichers = enrichers?.ToList() ?? [new TraceActivityEnricher()];
+        => _enrichers = enrichers?.ToList()
+            ?? new List<IWideEventEnricher> { new TraceActivityEnricher() };
     
     public void Add(string name, object? value)
     {

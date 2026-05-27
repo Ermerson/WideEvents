@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using WideEvents.Core.Context;
 
 namespace WideEvents.Core.Enrichers;
 
