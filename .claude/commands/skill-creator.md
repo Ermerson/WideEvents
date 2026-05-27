@@ -1,5 +1,4 @@
-﻿---
-name: skill-creator
+---
 description: Create, refine, and optimize reusable Agent Skills for AI agents. Use when designing new skills, improving existing skills, defining evaluation criteria, increasing trigger accuracy, or structuring reusable workflows for agent-based systems.
 ---
 
@@ -189,10 +188,22 @@ Avoid:
 
 # Recommended Skill Structure
 
+For Claude Code, skills live in `.claude/commands/` as individual `.md` files.
+The file name becomes the slash command (e.g., `my-skill.md` → `/my-skill`).
+
 ```text
-skill-name/
-├── SKILL.md
-├── REFERENCE.md
-├── EXAMPLES.md
-├── CHECKLISTS.md
-└── resources/
+.claude/
+└── commands/
+    ├── my-skill.md          # frontmatter + all instructions in one file
+    └── another-skill.md
+```
+
+Frontmatter format:
+```markdown
+---
+description: One-line description used for command discovery and triggering.
+---
+```
+
+For complex skills, include reference material, examples, and checklists inline
+within the same file using clear section headers.
