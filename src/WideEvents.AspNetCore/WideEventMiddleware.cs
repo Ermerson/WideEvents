@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using WideEvents.Abstractions;
 using WideEvents.Core.Context;
 
 namespace WideEvents.AspNetCore;
@@ -9,25 +10,34 @@ public sealed class WideEventMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<WideEventMiddleware> _logger;
-    
-    public WideEventMiddleware(RequestDelegate next, ILogger<WideEventMiddleware> logger)
+    private readonly IEnumerable<IHttpWideEventEnricher> _enrichers;
+    private readonly IWideEventExporter _exporter;
+
+    public WideEventMiddleware(
+        RequestDelegate next, 
+        ILogger<WideEventMiddleware> logger, 
+        IEnumerable<IHttpWideEventEnricher> enrichers,
+        IWideEventExporter exporter)
     {
         _next = next;
         _logger = logger;
+        _enrichers = enrichers;
+        _exporter = exporter;
     }
 
-    public async Task Invoke(HttpContext context)
+    public async Task Invoke(HttpContext context, IWideEventContext wideEvent)
     {
         var start = Stopwatch.GetTimestamp();
         
         try
         {
-            WideEvent.Add("http.method", context.Request.Method);
-            WideEvent.Add("http.path", context.Request.Path.Value);
-
+            foreach (var enricher in _enrichers)
+                enricher.EnrichRequest(context, wideEvent);
+            
             await _next(context);
             
-            WideEvent.Add("http.status_code", context.Response.StatusCode);
+            foreach (var enricher in _enrichers)
+                enricher.EnrichResponse(context, wideEvent);
         }
         catch (Exception ex)
         {
@@ -39,10 +49,7 @@ public sealed class WideEventMiddleware
         finally
         {
             WideEvent.Add("duration_ms", Stopwatch.GetElapsedTime(start).TotalMilliseconds);
-
-            _logger.LogInformation("WideEvent: {@WideEvent}", WideEvent.Current?.Build());
-            
-            WideEvent.Reset();
+            await _exporter.ExportAsync(wideEvent.Build(), context.RequestAborted);
         }
     }
 }

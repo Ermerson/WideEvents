@@ -4,6 +4,7 @@ using Serilog.Events;
 using WideEvents.AspNetCore;
 using WideEvents.Core.Context;
 using WideEvents.Sample.Api;
+using WideEvents.Sample.Api.Enricher;
 
 // Populate Activity.Current so the wide event picks up trace_id/span_id
 // without wiring a full OpenTelemetry pipeline in this sample.
@@ -21,6 +22,10 @@ builder.Host.UseSerilog((_, logging) =>
         .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
         .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
         .WriteTo.Console(new PrettyJsonFormatter()));
+
+
+builder.Services.AddSingleton<IHttpWideEventEnricher, AuthEnricher>();
+builder.Services.AddWideEvents();
 
 var app = builder.Build();
 

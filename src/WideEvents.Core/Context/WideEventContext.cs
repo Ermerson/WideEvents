@@ -1,12 +1,17 @@
 using System.Diagnostics;
 using WideEvents.Abstractions;
+using WideEvents.Core.Enrichers;
 
 namespace WideEvents.Core.Context;
 
 public sealed class WideEventContext : IWideEventContext
 {
     private readonly Dictionary<string, object?> _attributes = new();
-
+    private readonly IReadOnlyList<IWideEventEnricher> _enrichers;
+    
+    public WideEventContext(IEnumerable<IWideEventEnricher>? enrichers = null)
+     => _enrichers = enrichers?.ToList() ?? [new TraceActivityEnricher()];
+    
     public void Add(string name, object? value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -22,13 +27,8 @@ public sealed class WideEventContext : IWideEventContext
         foreach (var (key, value) in _attributes)
             SetNested(root, key, value);
 
-        var activity = Activity.Current;
-        if (activity is not null)
-        {
-            root["trace_id"] = activity.TraceId.ToString();
-            root["span_id"] = activity.SpanId.ToString();
-            root["trace_flags"] = activity.ActivityTraceFlags.ToString();
-        }
+        foreach (var enricher in _enrichers)
+            enricher.Enrich(root);
 
         return root;
     }
