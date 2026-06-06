@@ -7,9 +7,6 @@
 
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\WideEvents.AspNetCore\WideEvents.AspNetCore.csproj" />
   </ItemGroup>
 
