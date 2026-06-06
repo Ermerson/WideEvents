@@ -50,4 +50,16 @@ public sealed class WideEventsOptionsTests
 
         result.Should().BeSameAs(options);
     }
+
+    [Fact]
+    public void UseAuthEnricher_CalledTwice_AccumulatesConfig()
+    {
+        var options = new WideEventsOptions();
+
+        options.UseAuthEnricher(o => o.ClaimType = "sub");
+        options.UseAuthEnricher(o => o.FieldName = "auth.id");
+
+        options.AuthEnricher!.ClaimType.Should().Be("sub");
+        options.AuthEnricher!.FieldName.Should().Be("auth.id");
+    }
 }

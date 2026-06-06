@@ -32,7 +32,6 @@ app.MapGet("/", () => "WideEvents sample - try GET /checkout/user_456 or GET /bo
 
 app.MapGet("/checkout/{userId}", (string userId) =>
 {
-    WideEvent.Add("user.id", userId);
     WideEvent.Add("user.subscription", "premium");
     WideEvent.Add("cart.id", "cart_xyz");
     WideEvent.Add("cart.total_cents", 15999);
@@ -45,7 +44,6 @@ app.MapGet("/checkout/{userId}", (string userId) =>
 
 app.MapGet("/boom", () =>
 {
-    WideEvent.Add("user.id", "user_456");
     WideEvent.Add("payment.provider", "stripe");
 
     throw new InvalidOperationException("payment provider timeout");

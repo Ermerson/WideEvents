@@ -6,7 +6,7 @@ public sealed class WideEventsOptions
 
     public WideEventsOptions UseAuthEnricher(Action<AuthEnricherOptions>? configure = null)
     {
-        AuthEnricher = new AuthEnricherOptions();
+        AuthEnricher ??= new AuthEnricherOptions();
         configure?.Invoke(AuthEnricher);
         return this;
     }
