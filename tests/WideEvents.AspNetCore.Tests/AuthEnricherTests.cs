@@ -56,6 +56,19 @@ public sealed class AuthEnricherTests
     }
 
     [Fact]
+    public void EnrichRequest_WhenUserIsNull_IgnoresNullValue()
+    {
+        var enricher = new AuthEnricher(new AuthEnricherOptions());
+        var ctx = new DefaultHttpContext();
+        ctx.User = null!;
+        var wideEvent = new WideEventContext(enrichers: []);
+
+        enricher.EnrichRequest(ctx, wideEvent);
+
+        wideEvent.Build().Should().NotContainKey("user");
+    }
+
+    [Fact]
     public void EnrichResponse_DoesNotAddAnyField()
     {
         var enricher = new AuthEnricher(new AuthEnricherOptions());
