@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using WideEvents.Abstractions;
 using WideEvents.Core.Context;
 
@@ -10,22 +11,23 @@ public sealed class WideEventMiddleware
     private readonly RequestDelegate _next;
     private readonly IEnumerable<IHttpWideEventEnricher> _enrichers;
     private readonly IWideEventExporter _exporter;
+    private readonly ILogger<WideEventMiddleware> _logger;
 
     public WideEventMiddleware(
         RequestDelegate next,
         IEnumerable<IHttpWideEventEnricher> enrichers,
-        IWideEventExporter exporter)
+        IWideEventExporter exporter,
+        ILogger<WideEventMiddleware> logger)
     {
         _next = next;
         _enrichers = enrichers;
         _exporter = exporter;
+        _logger = logger;
     }
 
-    // IWideEventContext é injetado como Scoped via Invoke() — um contexto por request.
-    // Registrado no DI como _ => WideEvent.Current para que chamadas a WideEvent.Add()
-    // no código do handler refiram a mesma instância.
     public async Task Invoke(HttpContext context, IWideEventContext wideEvent)
     {
+        using var scope = _logger.BeginScope(wideEvent);
         var start = Stopwatch.GetTimestamp();
 
         try
@@ -48,7 +50,7 @@ public sealed class WideEventMiddleware
         {
             wideEvent.Add("duration_ms", Stopwatch.GetElapsedTime(start).TotalMilliseconds);
             await _exporter.ExportAsync(wideEvent.Build(), context.RequestAborted);
-            WideEvent.Reset(); // limpa o AsyncLocal ao fim da request
+            WideEvent.Reset();
         }
     }
 }

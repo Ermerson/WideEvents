@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using WideEvents.Abstractions;
 using Xunit;
@@ -11,7 +13,8 @@ public sealed class WideEventMiddlewareTests
     private static WideEventMiddleware BuildMiddleware(
         RequestDelegate? next = null,
         IEnumerable<IHttpWideEventEnricher>? enrichers = null,
-        IWideEventExporter? exporter = null)
+        IWideEventExporter? exporter = null,
+        ILogger<WideEventMiddleware>? logger = null)
     {
         var mockExporter = new Mock<IWideEventExporter>();
         mockExporter
@@ -21,7 +24,8 @@ public sealed class WideEventMiddlewareTests
         return new WideEventMiddleware(
             next ?? (_ => Task.CompletedTask),
             enrichers ?? [],
-            exporter ?? mockExporter.Object);
+            exporter ?? mockExporter.Object,
+            logger ?? NullLogger<WideEventMiddleware>.Instance);
     }
 
     private static (Mock<IWideEventContext> mock, IWideEventContext context) MockContext()
@@ -190,5 +194,58 @@ public sealed class WideEventMiddlewareTests
         mock.Verify(
             c => c.Add("duration_ms", It.Is<object?>(v => v != null && (double)v >= 0)),
             Times.Once);
+    }
+
+    // ── Logger scope ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Invoke_OpensScope_WithWideEventContext()
+    {
+        var (_, ctx) = MockContext();
+        var logger = new Mock<ILogger<WideEventMiddleware>>();
+        logger
+            .Setup(l => l.BeginScope(It.IsAny<IWideEventContext>()))
+            .Returns(Mock.Of<IDisposable>());
+
+        var middleware = BuildMiddleware(logger: logger.Object);
+        await middleware.Invoke(new DefaultHttpContext(), ctx);
+
+        logger.Verify(l => l.BeginScope(ctx), Times.Once);
+    }
+
+    [Fact]
+    public async Task Invoke_DisposesScope_WhenRequestCompletes()
+    {
+        var (_, ctx) = MockContext();
+        var disposable = new Mock<IDisposable>();
+        var logger = new Mock<ILogger<WideEventMiddleware>>();
+        logger
+            .Setup(l => l.BeginScope(It.IsAny<IWideEventContext>()))
+            .Returns(disposable.Object);
+
+        var middleware = BuildMiddleware(logger: logger.Object);
+        await middleware.Invoke(new DefaultHttpContext(), ctx);
+
+        disposable.Verify(d => d.Dispose(), Times.Once);
+    }
+
+    [Fact]
+    public async Task Invoke_DisposesScope_WhenRequestThrows()
+    {
+        var (_, ctx) = MockContext();
+        var disposable = new Mock<IDisposable>();
+        var logger = new Mock<ILogger<WideEventMiddleware>>();
+        logger
+            .Setup(l => l.BeginScope(It.IsAny<IWideEventContext>()))
+            .Returns(disposable.Object);
+
+        var middleware = BuildMiddleware(
+            next: _ => throw new InvalidOperationException("boom"),
+            logger: logger.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => middleware.Invoke(new DefaultHttpContext(), ctx));
+
+        disposable.Verify(d => d.Dispose(), Times.Once);
     }
 }
