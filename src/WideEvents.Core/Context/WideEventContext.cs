@@ -1,10 +1,11 @@
+using System.Collections;
 using System.Diagnostics;
 using WideEvents.Abstractions;
 using WideEvents.Core.Enrichers;
 
 namespace WideEvents.Core.Context;
 
-public sealed class WideEventContext : IWideEventContext
+public sealed class WideEventContext : IWideEventContext, IEnumerable<KeyValuePair<string, object?>>
 {
     private readonly Dictionary<string, object?> _attributes = new();
     private readonly IReadOnlyList<IWideEventEnricher> _enrichers;
@@ -56,4 +57,9 @@ public sealed class WideEventContext : IWideEventContext
 
         current[segments[^1]] = value;
     }
+
+    public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
+        => _attributes.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

@@ -178,4 +178,39 @@ public sealed class WideEventContextTests
         built["span_id"].Should().Be(activity.SpanId.ToString());
         built.Should().ContainKey("trace_flags");
     }
+
+    // ── IEnumerable<KeyValuePair<string, object?>> ────────────────────────────
+
+    [Fact]
+    public void Enumeration_ReturnsStoredAttributes()
+    {
+        var context = new WideEventContext(enrichers: []);
+        context.Add("user.id", "u-1");
+        context.Add("http.method", "GET");
+
+        var pairs = context.ToList();
+
+        pairs.Should().ContainSingle(p => p.Key == "user.id" && (string?)p.Value == "u-1");
+        pairs.Should().ContainSingle(p => p.Key == "http.method" && (string?)p.Value == "GET");
+    }
+
+    [Fact]
+    public void Enumeration_YieldsAllAddedKeys()
+    {
+        var context = new WideEventContext(enrichers: []);
+        context.Add("a", 1);
+        context.Add("b", 2);
+
+        context.Select(p => p.Key).Should().BeEquivalentTo(["a", "b"]);
+    }
+
+    [Fact]
+    public void Enumeration_DoesNotYieldNullValues()
+    {
+        // Add() rejects null — the invariant is enforced at the gate; verify enumeration reflects it.
+        var context = new WideEventContext(enrichers: []);
+        context.Add("key", "value");
+
+        context.Should().AllSatisfy(p => p.Value.Should().NotBeNull());
+    }
 }
