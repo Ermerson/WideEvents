@@ -30,11 +30,16 @@ app.UseWideEvents();
 
 app.MapGet("/", () => "WideEvents sample - try GET /checkout/user_456 or GET /boom");
 
-app.MapGet("/checkout/{userId}", (string userId) =>
+app.MapGet("/checkout/{userId}", (string userId, ILogger<Program> logger) =>
 {
     WideEvent.Add("user.subscription", "premium");
     WideEvent.Add("cart.id", "cart_xyz");
     WideEvent.Add("cart.total_cents", 15999);
+
+    // Fields added above are already in the ILogger scope pushed by WideEventMiddleware.
+    // This warning is emitted mid-request — Serilog will include them automatically.
+    logger.LogWarning("Cart value above fraud review threshold");
+
     WideEvent.Add("payment.method", "card");
     WideEvent.Add("payment.provider", "stripe");
     WideEvent.Add("outcome", "ok");
