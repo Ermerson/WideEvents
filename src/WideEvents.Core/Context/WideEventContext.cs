@@ -5,15 +5,28 @@ using WideEvents.Core.Enrichers;
 
 namespace WideEvents.Core.Context;
 
+/// <summary>
+/// Default <see cref="IWideEventContext"/> implementation. Accumulates flat key-value
+/// attributes and materializes them into a nested dictionary on <see cref="Build"/>.
+/// Also implements <see cref="IEnumerable{T}"/> so the raw attribute bag can be pushed
+/// as an <c>ILogger</c> scope.
+/// </summary>
 public sealed class WideEventContext : IWideEventContext, IEnumerable<KeyValuePair<string, object?>>
 {
     private readonly Dictionary<string, object?> _attributes = new();
     private readonly IReadOnlyList<IWideEventEnricher> _enrichers;
-    
+
+    /// <summary>
+    /// Creates a new context, optionally supplying a custom set of enrichers.
+    /// When <paramref name="enrichers"/> is <see langword="null"/>, defaults to
+    /// <see cref="TraceActivityEnricher"/>.
+    /// </summary>
     public WideEventContext(IEnumerable<IWideEventEnricher>? enrichers = null)
         => _enrichers = enrichers?.ToList()
             ?? new List<IWideEventEnricher> { new TraceActivityEnricher() };
-    
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is null or whitespace.</exception>
     public void Add(string name, object? value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -22,6 +35,7 @@ public sealed class WideEventContext : IWideEventContext, IEnumerable<KeyValuePa
             _attributes[name] = value;
     }
 
+    /// <inheritdoc/>
     public IReadOnlyDictionary<string, object?> Build()
     {
         var root = new Dictionary<string, object?>();
@@ -58,6 +72,7 @@ public sealed class WideEventContext : IWideEventContext, IEnumerable<KeyValuePa
         current[segments[^1]] = value;
     }
 
+    /// <summary>Iterates the raw (flat) attribute bag.</summary>
     public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
         => _attributes.GetEnumerator();
 

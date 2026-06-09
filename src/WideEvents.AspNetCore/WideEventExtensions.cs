@@ -9,8 +9,8 @@ namespace WideEvents.AspNetCore;
 public static class WideEventExtensions
 {
     /// <summary>
-    /// Registra os serviços necessários para o WideEvents no contêiner de DI.
-    /// Deve ser chamado antes de <see cref="UseWideEvents"/>.
+    /// Registers the services required by WideEvents in the DI container.
+    /// Must be called before <see cref="UseWideEvents"/>.
     /// </summary>
     public static IServiceCollection AddWideEvents(
         this IServiceCollection services,
@@ -19,8 +19,8 @@ public static class WideEventExtensions
         var options = new WideEventsOptions();
         configure?.Invoke(options);
 
-        // Retorna WideEvent.Current para que o contexto injetado no middleware seja o mesmo
-        // que o código do handler acessa via WideEvent.Add().
+        // Returns WideEvent.Current so the context injected into the middleware is the same
+        // instance the handler code reaches via WideEvent.Add().
         services.AddScoped<IWideEventContext>(_ => WideEvent.Current);
         services.AddSingleton<IHttpWideEventEnricher, DefaultHttpEnricher>();
         services.AddSingleton<IWideEventExporter, LoggerWideEventExporter>();
@@ -31,6 +31,7 @@ public static class WideEventExtensions
         return services;
     }
 
+    /// <summary>Adds <see cref="WideEventMiddleware"/> to the request pipeline.</summary>
     public static IApplicationBuilder UseWideEvents(this IApplicationBuilder app)
         => app.UseMiddleware<WideEventMiddleware>();
 }

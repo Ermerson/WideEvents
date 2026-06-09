@@ -4,8 +4,8 @@ using WideEvents.Abstractions;
 namespace WideEvents.AspNetCore;
 
 /// <summary>
-/// Implementação padrão de <see cref="IWideEventExporter"/> que emite o wide event via
-/// <see cref="ILogger"/> usando o operador de destructuring <c>@</c>.
+/// Default <see cref="IWideEventExporter"/> implementation that emits the wide event via
+/// <see cref="ILogger"/> using the destructuring operator <c>@</c>.
 /// </summary>
 public sealed class LoggerWideEventExporter : IWideEventExporter
 {

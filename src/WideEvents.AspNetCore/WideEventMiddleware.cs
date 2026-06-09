@@ -6,6 +6,11 @@ using WideEvents.Core.Context;
 
 namespace WideEvents.AspNetCore;
 
+/// <summary>
+/// ASP.NET Core middleware that wraps each HTTP request in a wide-event context,
+/// runs registered <see cref="IHttpWideEventEnricher"/> implementations, and exports
+/// the built event after the response is complete.
+/// </summary>
 public sealed class WideEventMiddleware
 {
     private readonly RequestDelegate _next;
@@ -13,6 +18,7 @@ public sealed class WideEventMiddleware
     private readonly IWideEventExporter _exporter;
     private readonly ILogger<WideEventMiddleware> _logger;
 
+    /// <summary>Initializes the middleware with its pipeline dependencies.</summary>
     public WideEventMiddleware(
         RequestDelegate next,
         IEnumerable<IHttpWideEventEnricher> enrichers,
@@ -25,6 +31,10 @@ public sealed class WideEventMiddleware
         _logger = logger;
     }
 
+    /// <summary>
+    /// Processes the request: enriches on entry, invokes the pipeline, captures
+    /// <c>error.*</c> fields on exception, and exports the built event on completion.
+    /// </summary>
     public async Task Invoke(HttpContext context, IWideEventContext wideEvent)
     {
         using var scope = _logger.BeginScope(wideEvent);
