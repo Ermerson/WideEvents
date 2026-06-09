@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using WideEvents.Abstractions;
+using WideEvents.Core.Builder;
 using Xunit;
 
 namespace WideEvents.AspNetCore.Tests;
@@ -14,18 +15,25 @@ public sealed class WideEventMiddlewareTests
         RequestDelegate? next = null,
         IEnumerable<IHttpWideEventEnricher>? enrichers = null,
         IWideEventExporter? exporter = null,
-        ILogger<WideEventMiddleware>? logger = null)
+        ILogger<WideEventMiddleware>? logger = null,
+        IWideEventBuilder? builder = null)
     {
         var mockExporter = new Mock<IWideEventExporter>();
         mockExporter
             .Setup(e => e.ExportAsync(It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        var mockBuilder = new Mock<IWideEventBuilder>();
+        mockBuilder
+            .Setup(b => b.Build())
+            .Returns(new Dictionary<string, object?>());
+
         return new WideEventMiddleware(
             next ?? (_ => Task.CompletedTask),
             enrichers ?? [],
             exporter ?? mockExporter.Object,
-            logger ?? NullLogger<WideEventMiddleware>.Instance);
+            logger ?? NullLogger<WideEventMiddleware>.Instance,
+            builder ?? mockBuilder.Object);
     }
 
     private static (Mock<IWideEventContext> mock, IWideEventContext context) MockContext()
@@ -97,21 +105,38 @@ public sealed class WideEventMiddlewareTests
         enricher.Verify(e => e.EnrichResponse(httpContext, ctx), Times.Once);
     }
 
+    // ── Builder ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Invoke_CallsBuilderBuild_AtCompletion()
+    {
+        var (_, ctx) = MockContext();
+        var builder = new Mock<IWideEventBuilder>();
+        builder.Setup(b => b.Build()).Returns(new Dictionary<string, object?>());
+
+        var middleware = BuildMiddleware(builder: builder.Object);
+        await middleware.Invoke(new DefaultHttpContext(), ctx);
+
+        builder.Verify(b => b.Build(), Times.Once);
+    }
+
     // ── Exporter ───────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Invoke_ExportsBuiltEvent()
     {
         var builtEvent = new Dictionary<string, object?> { ["outcome"] = "ok" };
-        var (mock, ctx) = MockContext();
-        mock.Setup(c => c.Build()).Returns(builtEvent);
+        var (_, ctx) = MockContext();
+
+        var builder = new Mock<IWideEventBuilder>();
+        builder.Setup(b => b.Build()).Returns(builtEvent);
 
         var exporter = new Mock<IWideEventExporter>();
         exporter
             .Setup(e => e.ExportAsync(It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var middleware = BuildMiddleware(exporter: exporter.Object);
+        var middleware = BuildMiddleware(builder: builder.Object, exporter: exporter.Object);
         await middleware.Invoke(new DefaultHttpContext(), ctx);
 
         exporter.Verify(
@@ -122,7 +147,10 @@ public sealed class WideEventMiddlewareTests
     [Fact]
     public async Task Invoke_ExportsEvenOnException()
     {
-        var (mock, ctx) = MockContext();
+        var (_, ctx) = MockContext();
+        var builder = new Mock<IWideEventBuilder>();
+        builder.Setup(b => b.Build()).Returns(new Dictionary<string, object?>());
+
         var exporter = new Mock<IWideEventExporter>();
         exporter
             .Setup(e => e.ExportAsync(It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<CancellationToken>()))
@@ -130,6 +158,7 @@ public sealed class WideEventMiddlewareTests
 
         var middleware = BuildMiddleware(
             next: _ => throw new InvalidOperationException("boom"),
+            builder: builder.Object,
             exporter: exporter.Object);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -140,7 +169,7 @@ public sealed class WideEventMiddlewareTests
             Times.Once);
     }
 
-    // ── Atributos de erro ──────────────────────────────────────────────────────
+    // ── Error attributes ───────────────────────────────────────────────────────
 
     [Fact]
     public async Task Invoke_OnException_AddsErrorTypeAndMessage()
@@ -199,18 +228,20 @@ public sealed class WideEventMiddlewareTests
     // ── Logger scope ───────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Invoke_OpensScope_WithWideEventContext()
+    public async Task Invoke_OpensScope_WithRequestDictionary()
     {
         var (_, ctx) = MockContext();
         var logger = new Mock<ILogger<WideEventMiddleware>>();
         logger
-            .Setup(l => l.BeginScope(It.IsAny<IWideEventContext>()))
+            .Setup(l => l.BeginScope(It.IsAny<Dictionary<string, object?>>()))
             .Returns(Mock.Of<IDisposable>());
 
         var middleware = BuildMiddleware(logger: logger.Object);
         await middleware.Invoke(new DefaultHttpContext(), ctx);
 
-        logger.Verify(l => l.BeginScope(ctx), Times.Once);
+        logger.Verify(
+            l => l.BeginScope(It.IsAny<Dictionary<string, object?>>()),
+            Times.Once);
     }
 
     [Fact]
@@ -220,7 +251,7 @@ public sealed class WideEventMiddlewareTests
         var disposable = new Mock<IDisposable>();
         var logger = new Mock<ILogger<WideEventMiddleware>>();
         logger
-            .Setup(l => l.BeginScope(It.IsAny<IWideEventContext>()))
+            .Setup(l => l.BeginScope(It.IsAny<Dictionary<string, object?>>()))
             .Returns(disposable.Object);
 
         var middleware = BuildMiddleware(logger: logger.Object);
@@ -236,7 +267,7 @@ public sealed class WideEventMiddlewareTests
         var disposable = new Mock<IDisposable>();
         var logger = new Mock<ILogger<WideEventMiddleware>>();
         logger
-            .Setup(l => l.BeginScope(It.IsAny<IWideEventContext>()))
+            .Setup(l => l.BeginScope(It.IsAny<Dictionary<string, object?>>()))
             .Returns(disposable.Object);
 
         var middleware = BuildMiddleware(
