@@ -45,8 +45,8 @@ public sealed class WideEventBuilderTests : IDisposable
         WideEvent.Add("outcome", "ok");
         Builder.Build();
 
-        // After Build, Drain was called — context is empty
-        WideEvent.Current.Build().Should().NotContainKey("outcome");
+        // After Build, Drain was called — draining again should yield empty dict
+        WideEvent.Drain().Should().BeEmpty();
     }
 
     // ── Scope data ─────────────────────────────────────────────────────────────
