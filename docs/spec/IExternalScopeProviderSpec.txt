@@ -1,0 +1,350 @@
+﻿```text
+You are working on the WideEvents project, a .NET observability framework inspired by Wide Events and Canonical Log Lines.
+
+Your goal is to refactor the current implementation to align with the architecture described below.
+
+IMPORTANT:
+- Do not introduce breaking changes unless absolutely necessary.
+- Favor clean architecture and separation of concerns.
+- Preserve the existing public API whenever possible.
+- The implementation must be production-ready.
+- Target .NET 8.
+- Nullable reference types must remain enabled.
+
+====================================================
+ARCHITECTURAL GOAL
+====================================================
+
+WideEvents should no longer rely exclusively on AsyncLocal as its primary context propagation mechanism.
+
+The new architecture must be:
+
+Activity.Current
+        +
+IExternalScopeProvider
+        +
+WideEvent local context (AsyncLocal)
+        ↓
+WideEventBuilder
+        ↓
+Structured Wide Event
+
+Responsibilities:
+
+1. Activity.Current
+   - Distributed tracing
+   - trace_id
+   - span_id
+   - trace_flags
+   - activity tags
+
+2. IExternalScopeProvider
+   - Request-level context
+   - Correlation data
+   - Tenant information
+   - User information
+   - Feature flags
+   - Any context propagated through ILogger.BeginScope()
+
+3. AsyncLocal
+   - Keep AsyncLocal
+   - DO NOT remove it
+   - AsyncLocal should only store values explicitly added through:
+
+     WideEvent.Add(...)
+
+   - AsyncLocal is no longer the source of truth
+   - AsyncLocal acts only as a lightweight request-local buffer
+
+4. WideEventBuilder
+   - Responsible for building the final snapshot
+   - Must merge:
+       - Activity data
+       - Scope data
+       - AsyncLocal data
+   - Must support structured nested output
+
+====================================================
+TASK 1
+ADD IExternalScopeProvider SUPPORT
+====================================================
+
+Implement a logging provider infrastructure that supports:
+
+- ILoggerProvider
+- ISupportExternalScope
+
+Create:
+
+WideEventLoggerProvider
+
+Requirements:
+
+- Store an IExternalScopeProvider instance
+- Default to LoggerExternalScopeProvider
+- Expose internal access for the builder
+
+Example:
+
+public sealed class WideEventLoggerProvider
+    : ILoggerProvider,
+      ISupportExternalScope
+
+====================================================
+TASK 2
+IMPLEMENT WideEventLogger
+====================================================
+
+Create a lightweight logger implementation.
+
+Requirements:
+
+- Support BeginScope()
+- Use scopeProvider.Push(...)
+- Logging methods can remain no-op if not required
+- The purpose is scope propagation, not log emission
+
+====================================================
+TASK 3
+REFACTOR WideEventBuilder
+====================================================
+
+Create or refactor:
+
+IWideEventBuilder
+WideEventBuilder
+
+Builder responsibilities:
+
+Build():
+
+1. Read Activity.Current
+2. Extract:
+   - TraceId
+   - SpanId
+   - TraceFlags
+   - Activity tags
+
+3. Read all active scopes from IExternalScopeProvider
+
+Use:
+
+scopeProvider.ForEachScope(...)
+
+4. Read AsyncLocal data from WideEvent
+
+5. Merge all sources
+
+Merge precedence:
+
+1. WideEvent local values
+2. Activity tags
+3. Scope values
+
+Local values must win.
+
+====================================================
+TASK 4
+REFACTOR WideEvent STATIC API
+====================================================
+
+Keep:
+
+WideEvent.Add(key, value)
+
+Internally:
+
+- Store values in AsyncLocal
+- AsyncLocal only stores explicit event data
+
+Add:
+
+internal IReadOnlyDictionary<string, object?> Drain()
+
+Requirements:
+
+- Return current values
+- Clear AsyncLocal after draining
+
+This prevents stale values between requests.
+
+====================================================
+TASK 5
+STRUCTURED EVENT OUTPUT
+====================================================
+
+Implement:
+
+WideEventStructureBuilder
+
+Goal:
+
+Convert flat dot notation:
+
+user.id
+user.subscription
+payment.provider
+
+into:
+
+{
+  "user": {
+    "id": "...",
+    "subscription": "..."
+  },
+  "payment": {
+    "provider": "..."
+  }
+}
+
+Requirements:
+
+- Support arbitrary nesting
+- No recursion limits for normal use
+- Preserve primitive values
+
+====================================================
+TASK 6
+MIDDLEWARE REFACTOR
+====================================================
+
+Refactor WideEventMiddleware.
+
+Requirements:
+
+Create request scope:
+
+using logger.BeginScope(...)
+
+Add request metadata:
+
+- method
+- route/path
+- service
+
+Populate Activity tags.
+
+At request completion:
+
+- Build event through WideEventBuilder
+- Convert to structured output
+- Apply sanitizer
+- Apply sampling
+- Send to exporters
+- Emit canonical log line
+
+The middleware must remain the single emission point.
+
+====================================================
+TASK 7
+OPENTELEMETRY INTEGRATION
+====================================================
+
+Ensure OpenTelemetry integration uses:
+
+Activity.Current
+
+Do not duplicate trace information elsewhere.
+
+The final event should automatically contain:
+
+trace_id
+span_id
+trace_flags
+
+without requiring user code.
+
+====================================================
+TASK 8
+DEPENDENCY INJECTION
+====================================================
+
+Refactor registration.
+
+Add:
+
+services.AddWideEvents(...)
+
+Requirements:
+
+Register:
+
+- WideEventLoggerProvider
+- IWideEventBuilder
+- Sampling services
+- Sanitization services
+- Export pipeline
+
+Provider must be available through DI.
+
+====================================================
+TASK 9
+DOCUMENTATION COMMENTS
+====================================================
+
+Add XML documentation to:
+
+- WideEvent
+- WideEventBuilder
+- WideEventLoggerProvider
+- WideEventMiddleware
+- IWideEventBuilder
+
+Focus on explaining responsibilities and interaction with:
+
+- Activity
+- Scopes
+- AsyncLocal
+
+====================================================
+TASK 10
+TESTS
+====================================================
+
+Add or update tests covering:
+
+1. Activity values appear in final event
+
+2. Scope values appear in final event
+
+3. WideEvent.Add values appear in final event
+
+4. Merge precedence:
+   Local > Activity > Scope
+
+5. Drain clears AsyncLocal
+
+6. Structured builder creates nested JSON hierarchy
+
+7. Middleware emits a single canonical event
+
+====================================================
+EXPECTED FINAL RESULT
+====================================================
+
+The final architecture should look like:
+
+Request
+   ↓
+BeginScope(...)
+   ↓
+Business Logic
+   ↓
+WideEvent.Add(...)
+   ↓
+Activity.Current
+   ↓
+WideEventBuilder
+   ↓
+Structured Event
+   ↓
+Exporter Pipeline
+   ↓
+Canonical Log Line
+
+The implementation should feel native to the Microsoft.Extensions.Logging ecosystem while preserving the simplicity of:
+
+WideEvent.Add("user.id", userId);
+
+for application developers.
+```

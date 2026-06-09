@@ -9,6 +9,10 @@ using WideEvents.Core.Logging;
 
 namespace WideEvents.AspNetCore;
 
+/// <summary>
+/// Extension methods for registering WideEvents services in the ASP.NET Core DI container
+/// and adding the middleware to the HTTP request pipeline.
+/// </summary>
 public static class WideEventExtensions
 {
     /// <summary>
