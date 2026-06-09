@@ -3,7 +3,9 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using WideEvents.AspNetCore.Enrichers;
+using WideEvents.Core.Builder;
 using WideEvents.Core.Context;
+using WideEvents.Core.Logging;
 using Xunit;
 
 namespace WideEvents.AspNetCore.Tests;
@@ -70,5 +72,29 @@ public sealed class WideEventExtensionsTests
         var built = wideEvent.Build();
         var auth = built["auth"].Should().BeAssignableTo<IReadOnlyDictionary<string, object?>>().Subject;
         auth["uid"].Should().Be("user_789");
+    }
+
+    [Fact]
+    public void AddWideEvents_RegistersWideEventLoggerProvider()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddWideEvents();
+
+        var provider = services.BuildServiceProvider();
+        provider.GetService<WideEventLoggerProvider>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddWideEvents_RegistersIWideEventBuilder()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddWideEvents();
+
+        var provider = services.BuildServiceProvider();
+        provider.GetService<IWideEventBuilder>().Should().NotBeNull();
     }
 }

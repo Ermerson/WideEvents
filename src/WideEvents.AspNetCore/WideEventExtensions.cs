@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using WideEvents.Abstractions;
 using WideEvents.AspNetCore.Enrichers;
+using WideEvents.Core.Builder;
 using WideEvents.Core.Context;
+using WideEvents.Core.Logging;
 
 namespace WideEvents.AspNetCore;
 
@@ -22,6 +25,17 @@ public static class WideEventExtensions
         // Returns WideEvent.Current so the context injected into the middleware is the same
         // instance the handler code reaches via WideEvent.Add().
         services.AddScoped<IWideEventContext>(_ => WideEvent.Current);
+
+        // Register the provider as a singleton, then also as ILoggerProvider so the logging
+        // infrastructure calls SetScopeProvider() on it, sharing the external scope.
+        services.AddSingleton<WideEventLoggerProvider>();
+        services.AddSingleton<ILoggerProvider>(sp =>
+            sp.GetRequiredService<WideEventLoggerProvider>());
+
+        // The builder reads the scope provider from WideEventLoggerProvider.
+        services.AddSingleton<IWideEventBuilder>(sp =>
+            new WideEventBuilder(sp.GetRequiredService<WideEventLoggerProvider>()));
+
         services.AddSingleton<IHttpWideEventEnricher, DefaultHttpEnricher>();
         services.AddSingleton<IWideEventExporter, LoggerWideEventExporter>();
 
