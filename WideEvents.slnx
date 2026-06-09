@@ -3,10 +3,14 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Project Path="src/WideEvents.Abstractions/WideEvents.Abstractions.csproj" />
-  <Project Path="src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />
-  <Project Path="src/WideEvents.Core/WideEvents.Core.csproj" />
-  <Project Path="tests/WideEvents.Core.Tests/WideEvents.Core.Tests.csproj" />
-  <Project Path="tests/WideEvents.AspNetCore.Tests/WideEvents.AspNetCore.Tests.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/WideEvents.Abstractions/WideEvents.Abstractions.csproj" />
+    <Project Path="src/WideEvents.AspNetCore/WideEvents.AspNetCore.csproj" />
+    <Project Path="src/WideEvents.Core/WideEvents.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WideEvents.AspNetCore.Tests/WideEvents.AspNetCore.Tests.csproj" />
+    <Project Path="tests/WideEvents.Core.Tests/WideEvents.Core.Tests.csproj" />
+  </Folder>
   <Project Path="sample/WideEvents.Sample.Api/WideEvents.Sample.Api.csproj" />
 </Solution>

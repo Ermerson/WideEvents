@@ -47,6 +47,30 @@ app.MapGet("/checkout/{userId}", (string userId, ILogger<Program> logger) =>
     return Results.Ok(new { status = "checked_out", user = userId });
 });
 
+app.MapGet("/checkout/scope", (ILogger<Program> logger) =>
+{
+    using (logger.BeginScope(new Dictionary<string, object?>
+    {
+        ["correlationId"] = Guid.NewGuid(),
+        ["cart.error"] = "processing_failed"
+     }))
+    {
+        WideEvent.Add("user.subscription", "premium");
+        WideEvent.Add("cart.id", "cart_xyz");
+        WideEvent.Add("cart.total_cents", 15999);
+
+        // Fields added above are already in the ILogger scope pushed by WideEventMiddleware.
+        // This warning is emitted mid-request — Serilog will include them automatically.
+        logger.LogWarning("Cart value above fraud review threshold");
+
+        WideEvent.Add("payment.method", "card");
+        WideEvent.Add("payment.provider", "stripe");
+        WideEvent.Add("outcome", "ok");
+    }
+
+    return Results.Ok(new { status = "checked_out", user = "test_scope" });
+});
+
 app.MapGet("/boom", () =>
 {
     WideEvent.Add("payment.provider", "stripe");

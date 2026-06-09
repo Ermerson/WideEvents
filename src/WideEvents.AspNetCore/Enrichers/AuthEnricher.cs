@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using WideEvents.Abstractions;
 
-namespace WideEvents.AspNetCore;
+namespace WideEvents.AspNetCore.Enrichers;
 
 public sealed class AuthEnricher(AuthEnricherOptions options) : IHttpWideEventEnricher
 {

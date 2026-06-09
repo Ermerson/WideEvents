@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using WideEvents.Abstractions;
+using WideEvents.AspNetCore.Enrichers;
 using WideEvents.Core.Context;
 
 namespace WideEvents.AspNetCore;

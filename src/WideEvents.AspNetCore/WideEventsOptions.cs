@@ -1,3 +1,5 @@
+using WideEvents.AspNetCore.Enrichers;
+
 namespace WideEvents.AspNetCore;
 
 public sealed class WideEventsOptions

@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace WideEvents.AspNetCore;
+namespace WideEvents.AspNetCore.Enrichers;
 
 public sealed class AuthEnricherOptions
 {

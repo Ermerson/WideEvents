@@ -15,5 +15,8 @@
       "Bash(git show:*)",
       "Bash(curl:*)"
     ]
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true
   }
 }

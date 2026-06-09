@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using WideEvents.AspNetCore.Enrichers;
 using WideEvents.Core.Context;
 using Xunit;
 

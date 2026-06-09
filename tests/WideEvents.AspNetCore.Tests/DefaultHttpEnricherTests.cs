@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using WideEvents.AspNetCore.Enrichers;
 using WideEvents.Core.Context;
 using WideEvents.Core.Enrichers;
 using Xunit;
