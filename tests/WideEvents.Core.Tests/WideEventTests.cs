@@ -116,4 +116,36 @@ public sealed class WideEventTests : IDisposable
         WideEvent.Add("key", "value");
         mock.Verify(c => c.Add("key", "value"), Times.Once);
     }
+
+    // ── Drain ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Drain_ReturnsAddedValues()
+    {
+        WideEvent.Add("user.id", "u-1");
+        WideEvent.Add("outcome", "ok");
+
+        var data = WideEvent.Drain();
+
+        data.Should().ContainKey("user.id").WhoseValue.Should().Be("u-1");
+        data.Should().ContainKey("outcome").WhoseValue.Should().Be("ok");
+    }
+
+    [Fact]
+    public void Drain_ClearsContext_SubsequentCurrentIsEmpty()
+    {
+        WideEvent.Add("outcome", "ok");
+
+        WideEvent.Drain();
+
+        WideEvent.Current.Build().Should().NotContainKey("outcome");
+    }
+
+    [Fact]
+    public void Drain_WhenEmpty_ReturnsEmptyDictionary()
+    {
+        var data = WideEvent.Drain();
+
+        data.Should().BeEmpty();
+    }
 }

@@ -28,4 +28,17 @@ public static class WideEvent
     /// </summary>
     public static void SetFactory(Func<IWideEventContext> factory)
         => WideEventContextFactory.SetFactory(factory);
+
+    /// <summary>
+    /// Returns the flat attributes accumulated in the current context and then clears it.
+    /// Called by <see cref="WideEvents.Core.Builder.WideEventBuilder"/> at build time.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, object?> Drain()
+    {
+        var data = CurrentContext.Value is WideEventContext ctx
+            ? ctx.Drain()
+            : new Dictionary<string, object?>();
+        CurrentContext.Value = null;
+        return data;
+    }
 }
