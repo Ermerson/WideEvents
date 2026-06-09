@@ -6,6 +6,7 @@ using Xunit;
 
 namespace WideEvents.Core.Tests;
 
+[Collection("WideEventStaticState")]
 public sealed class WideEventTests : IDisposable
 {
     // Garante que o estado global seja restaurado após cada teste
