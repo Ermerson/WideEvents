@@ -8,7 +8,10 @@ namespace WideEvents.Core.Builder;
 /// Default <see cref="IWideEventBuilder"/> implementation.
 /// Merges three data sources in ascending precedence order:
 /// <list type="number">
-///   <item>Scope values from <c>IExternalScopeProvider.ForEachScope()</c></item>
+///   <item>
+///     Scope values — captured at log-call time (includes disposed scopes) plus any
+///     scopes still active at build time via <c>IExternalScopeProvider.ForEachScope()</c>.
+///   </item>
 ///   <item><see cref="Activity.Current"/> trace IDs and tags</item>
 ///   <item><see cref="WideEvent.Drain()"/> AsyncLocal buffer (highest priority)</item>
 /// </list>
@@ -28,7 +31,14 @@ public sealed class WideEventBuilder : IWideEventBuilder
     {
         var flat = new Dictionary<string, object?>();
 
-        // 1. Scope values — lowest precedence
+        // 1a. Scope values captured at log-call time — lowest precedence.
+        // Covers scopes already disposed before Build() runs, as long as at least
+        // one log call occurred while the scope was active.
+        foreach (var (key, value) in _provider.DrainCapturedScopes())
+            flat[key] = value;
+
+        // 1b. Scope values still active at build time — same precedence layer.
+        // Catches long-lived scopes (middleware, framework) even without a log call.
         _provider.ScopeProvider.ForEachScope(
             (scope, state) =>
             {

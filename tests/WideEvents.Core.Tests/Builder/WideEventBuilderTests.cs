@@ -64,7 +64,7 @@ public sealed class WideEventBuilderTests : IDisposable
     }
 
     [Fact]
-    public void Build_AfterScopeDisposed_ScopeValuesAbsent()
+    public void Build_AfterScopeDisposed_ScopeValuesAbsent_WhenNoLogCallMade()
     {
         ILogger logger = _provider.CreateLogger("test");
         var scope = logger.BeginScope(
@@ -73,7 +73,41 @@ public sealed class WideEventBuilderTests : IDisposable
 
         var result = Builder.Build();
 
+        // No log call was made while the scope was active — nothing was captured.
         result.Should().NotContainKey("tenant");
+    }
+
+    [Fact]
+    public void Build_DisposedScope_ValuesCapturedAtLogCall_AppearInResult()
+    {
+        ILogger logger = _provider.CreateLogger("test");
+        var scope = logger.BeginScope(
+            new Dictionary<string, object?> { ["correlationId"] = "xyz" });
+        logger.LogInformation("trigger capture");
+        scope!.Dispose();
+
+        var result = Builder.Build();
+
+        result.Should().ContainKey("correlationId").WhoseValue.Should().Be("xyz");
+    }
+
+    [Fact]
+    public void Build_CapturedDisposedScope_ActivityStillWins_WhenSameKey()
+    {
+        ILogger logger = _provider.CreateLogger("test");
+        var scope = logger.BeginScope(
+            new Dictionary<string, object?> { ["outcome"] = "from-scope" });
+        logger.LogInformation("trigger capture");
+        scope!.Dispose();
+
+        using var activity = new Activity("test-op");
+        activity.SetIdFormat(ActivityIdFormat.W3C);
+        activity.Start();
+        activity.SetTag("outcome", "from-activity");
+
+        var result = Builder.Build();
+
+        result["outcome"].Should().Be("from-activity");
     }
 
     // ── Activity data ──────────────────────────────────────────────────────────
