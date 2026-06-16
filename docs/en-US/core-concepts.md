@@ -71,25 +71,33 @@ Keys that share a prefix are merged into the same object. If a path collides wit
 a scalar already set at an intermediate segment, the structured (nested) value
 wins.
 
-### `Build` and trace correlation
+## `IWideEventBuilder` and the merge pipeline
 
-`Build()` is non-mutating — it materializes a fresh dictionary from the
-accumulated attributes and, when an `Activity` is active, adds correlation fields
-from `System.Diagnostics.Activity.Current`:
+`WideEvents.Core.Builder.IWideEventBuilder` is the interface for building the
+final event dictionary. The default implementation `WideEventBuilder` merges
+**three data sources** in ascending precedence order:
 
-| Field | Source |
-| --- | --- |
-| `trace_id` | `Activity.Current.TraceId` |
-| `span_id` | `Activity.Current.SpanId` |
-| `trace_flags` | `Activity.Current.ActivityTraceFlags` |
+| Source | Precedence | How it gets there |
+| --- | --- | --- |
+| `ILogger.BeginScope(...)` values | Lowest | Via `IExternalScopeProvider` (shared by `WideEventLoggerProvider`) |
+| `Activity.Current` trace IDs and tags | Middle | Read at build time from `System.Diagnostics.Activity.Current` |
+| `WideEvent.Add(...)` values | Highest | AsyncLocal buffer, drained and cleared on `Build()` |
 
-If there is no active `Activity`, these fields are simply omitted. In ASP.NET Core
-an activity is created per request when there is a listener (e.g. OpenTelemetry,
-or any registered `ActivityListener`).
+When keys overlap, the higher-precedence source wins. The merged flat dictionary
+is then expanded by `WideEventStructureBuilder` into a nested hierarchy.
 
-## Exporting: `IWideEventExporter`
+In the ASP.NET Core integration, `IWideEventBuilder` is registered as a singleton
+and injected into the middleware. The middleware pushes request metadata
+(`http.method`, `http.path`) as an `ILogger` scope so they are captured through
+the scope provider pipeline even before any application code runs.
 
-`WideEvents.Abstractions` also defines the export contract:
+> For non-web or console use, prefer `WideEvent.Current.Build()` directly. It
+> produces the event from only the AsyncLocal buffer without the scope/Activity
+> merge, which is sufficient for simple scenarios.
+
+## `IWideEventExporter`
+
+`WideEvents.Abstractions` defines the export contract:
 
 ```csharp
 public interface IWideEventExporter
@@ -100,11 +108,16 @@ public interface IWideEventExporter
 }
 ```
 
-This is the extension point for sending built events to a downstream destination
-(OTLP, Kafka, stdout, …). It lets exporter packages depend on contracts without
-referencing `WideEvents.Core`.
+`AddWideEvents()` registers `LoggerWideEventExporter` as the default implementation.
+It emits the event via `ILogger` using the `{@WideEvent}` destructuring hint:
 
-> **Not wired up yet.** There is currently no pipeline that resolves and invokes
-> `IWideEventExporter`. Today, events are emitted through `ILogger` by the
-> ASP.NET Core middleware (see [ASP.NET Core integration](aspnetcore.md)). The
-> interface exists so exporters can be built against a stable contract.
+```csharp
+_logger.LogInformation("WideEvent: {@WideEvent}", wideEvent);
+```
+
+Register your own implementation after `AddWideEvents()` to send events to a
+custom destination (OTLP, Kafka, stdout, …). Because it is registered after the
+default, it overrides the default exporter in DI resolution.
+
+> The interface is defined in `WideEvents.Abstractions` so exporter packages can
+> depend on the contract without referencing `WideEvents.Core`.

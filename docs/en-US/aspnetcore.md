@@ -6,34 +6,44 @@
 per HTTP request**, automatically capturing request/response metadata and
 correlating it with the active trace.
 
-## Enabling the middleware
+## Setup
+
+Call `AddWideEvents()` in your service registration, then `UseWideEvents()` in
+the request pipeline:
 
 ```csharp
 using WideEvents.AspNetCore;
 
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddWideEvents(); // required — registers middleware dependencies
+
 var app = builder.Build();
 
-app.UseWideEvents();
+app.UseWideEvents(); // early in the pipeline so it wraps all handlers
 ```
 
-Register it early in the pipeline so it wraps the rest of your request handling.
-`UseWideEvents()` is a thin extension over `UseMiddleware<WideEventMiddleware>()`.
+`AddWideEvents()` registers:
+
+- `IWideEventExporter` → `LoggerWideEventExporter` (default emitter)
+- `IWideEventBuilder` → `WideEventBuilder` (3-source merge pipeline)
+- `WideEventLoggerProvider` as `ILoggerProvider` (scope integration)
+- `DefaultHttpEnricher` as `IHttpWideEventEnricher`
 
 ## What it captures automatically
 
-| Attribute | When |
-| --- | --- |
-| `http.method` | Always. |
-| `http.path` | Always. |
-| `http.status_code` | On success (after the pipeline completes). |
-| `error.type` | When the pipeline throws — the exception's type name. |
-| `error.message` | When the pipeline throws — the exception's message. |
-| `duration_ms` | Always (measured with `Stopwatch`). |
-| `trace_id`, `span_id`, `trace_flags` | When an `Activity` is active (added by `Build()`). |
+| Attribute | Source | When |
+| --- | --- | --- |
+| `http.method` | `DefaultHttpEnricher` | Always. |
+| `http.path` | `DefaultHttpEnricher` | Always. |
+| `http.status_code` | `DefaultHttpEnricher` | On success (after the pipeline completes). |
+| `error.type` | Middleware | When the pipeline throws — the exception's type name. |
+| `error.message` | Middleware | When the pipeline throws — the exception's message. |
+| `duration_ms` | Middleware | Always (measured with `Stopwatch`). |
+| `trace_id`, `span_id`, `trace_flags` | `WideEventBuilder` | When an `Activity` is active. |
 
 > On an unhandled exception, the middleware records `error.*`, emits the event,
-> and **re-throws** — so `http.status_code` is not present on the error path
-> (the response status had not been written yet).
+> and **re-throws** — so `http.status_code` is not present on the error path.
 
 ## Adding your own context
 
@@ -51,15 +61,63 @@ app.MapGet("/checkout/{userId}", (string userId) =>
 ```
 
 Because the context is `AsyncLocal`, these calls land on the current request's
-event. The middleware calls `WideEvent.Reset()` after emitting, so contexts do
-not leak between requests.
+event. The context is cleared when the middleware finishes (after `Build()` is
+called), so contexts do not leak between requests.
 
-## How the event is emitted (and rendering it)
+## Enrichers
 
-The middleware writes the event through `ILogger`:
+`IHttpWideEventEnricher` is the extension point for adding HTTP-derived fields
+without modifying the middleware. Implement the interface and register it in DI:
 
 ```csharp
-_logger.LogInformation("WideEvent: {@WideEvent}", WideEvent.Current.Build());
+public class TenantEnricher : IHttpWideEventEnricher
+{
+    public void EnrichRequest(HttpContext context, IWideEventContext wideEvent)
+    {
+        var tenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+        wideEvent.Add("tenant.id", tenantId);
+    }
+
+    public void EnrichResponse(HttpContext context, IWideEventContext wideEvent) { }
+}
+
+// in Program.cs:
+builder.Services.AddSingleton<IHttpWideEventEnricher, TenantEnricher>();
+```
+
+### Built-in enrichers
+
+**`DefaultHttpEnricher`** is registered automatically by `AddWideEvents()`. It
+captures `http.method`, `http.path`, and `http.status_code`.
+
+**`AuthEnricher`** is optional. Enable it via `WideEventsOptions`:
+
+```csharp
+builder.Services.AddWideEvents(options =>
+    options.UseAuthEnricher()); // reads ClaimTypes.NameIdentifier → "user.id"
+
+// custom claim and field name:
+builder.Services.AddWideEvents(options =>
+    options.UseAuthEnricher(o =>
+    {
+        o.ClaimType = "sub";
+        o.FieldName = "auth.subject";
+    }));
+```
+
+`AuthEnricher` is a no-op when the request is unauthenticated or the claim is
+absent.
+
+## How the event is exported
+
+After the pipeline completes (in the middleware's `finally` block), the middleware
+calls `IWideEventBuilder.Build()` to produce the merged event dictionary, then
+`IWideEventExporter.ExportAsync()` to emit it.
+
+The default exporter — `LoggerWideEventExporter` — writes via `ILogger`:
+
+```csharp
+_logger.LogInformation("WideEvent: {@WideEvent}", wideEvent);
 ```
 
 The `@` in `{@WideEvent}` is a **destructuring** hint. To see the event as nested
@@ -92,3 +150,13 @@ curl http://localhost:5080/boom                # error path
 The success path logs a single event containing `http`, `user`, `payment`,
 `duration_ms`, and the trace fields; the error path logs the same shape with an
 `error` object and an HTTP 500 response.
+
+### Custom exporter
+
+Register your own `IWideEventExporter` after `AddWideEvents()` to override the
+default:
+
+```csharp
+builder.Services.AddWideEvents();
+builder.Services.AddSingleton<IWideEventExporter, MyExporter>();
+```

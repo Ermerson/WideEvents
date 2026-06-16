@@ -7,18 +7,20 @@ de **wide events** (também conhecidos como *canonical log lines*). Em vez de
 espalhar várias linhas de log ao longo de uma requisição, você acumula contexto
 em um único evento estruturado e rico, e o emite uma única vez.
 
+> **Projeto de aprendizado.** Esta biblioteca é desenvolvida principalmente para
+> aprendizado e experimentação. Veja o [README raiz](../../README.md) para o
+> aviso completo e uma indicação de alternativa para produção.
+
 > **Status:** estágio inicial. Esta documentação descreve o que está
-> **atualmente implementado**. O [README](../../README.md) raiz descreve a visão
-> mais ampla e o roadmap (exporters, sampling, mascaramento de PII, schemas
-> gerados por source generator), grande parte ainda não construída.
+> **atualmente implementado**.
 
 ## Projetos
 
 | Projeto | Descrição |
 | --- | --- |
 | `WideEvents.Abstractions` | Contratos: `IWideEventContext` e `IWideEventExporter`. |
-| `WideEvents.Core` | O contexto do wide event e o acumulador estático `WideEvent`. |
-| `WideEvents.AspNetCore` | Middleware que emite um wide event por requisição HTTP. |
+| `WideEvents.Core` | Contexto do wide event, acumulador estático `WideEvent` e `WideEventBuilder`. |
+| `WideEvents.AspNetCore` | Middleware, enrichers e o `LoggerWideEventExporter` padrão. |
 
 ## Requisitos
 
@@ -41,10 +43,12 @@ using WideEvents.AspNetCore;
 using WideEvents.Core.Context;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddWideEvents(); // registra os serviços
+
 var app = builder.Build();
 
-// Emite um wide event por requisição.
-app.UseWideEvents();
+app.UseWideEvents(); // emite um wide event por requisição
 
 app.MapGet("/checkout/{userId}", (string userId) =>
 {
@@ -71,7 +75,7 @@ Uma requisição para `/checkout/user_456` produz um único evento:
 }
 ```
 
-> O middleware registra com `ILogger` usando `{@WideEvent}`. Para renderizar o
+> O exporter padrão emite via `ILogger` usando `{@WideEvent}`. Para renderizar o
 > evento como JSON aninhado você precisa de um logger estruturado que suporte
 > *destructuring* (por exemplo, Serilog). O logger de console padrão apenas chama
 > `ToString()` no dicionário. Veja [Integração com ASP.NET Core](aspnetcore.md).
@@ -79,8 +83,9 @@ Uma requisição para `/checkout/user_456` produz um único evento:
 ## Tópicos
 
 - [Conceitos principais](core-concepts.md) — a API `WideEvent`, chaves aninhadas,
-  correlação de trace e as abstrações.
-- [Integração com ASP.NET Core](aspnetcore.md) — o middleware e o que ele captura.
+  correlação de trace, o pipeline de merge e as abstrações.
+- [Integração com ASP.NET Core](aspnetcore.md) — o middleware, enrichers e como
+  o evento é exportado.
 
 ## Sample
 

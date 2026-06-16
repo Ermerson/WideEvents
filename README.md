@@ -8,6 +8,20 @@ Instead of scattering many log lines across a request, you accumulate context in
 
 ---
 
+## 📚 Learning Project
+
+This project is primarily a **learning and experimentation** project. A significant portion of the codebase, architecture exploration, and implementation process is being developed with the assistance of AI-powered development tools and agents.
+
+Because of that, you may encounter incomplete features, experimental implementations, architectural changes over time, and limited guarantees regarding stability, performance, or production readiness.
+
+Contributions, feedback, and [discussions](https://github.com/Ermerson/WideEvents/discussions) are highly appreciated.
+
+### Looking for a production-ready solution?
+
+Evaluate **[Waystone Widelog Events](https://draekien-industries.wpei.me/waystone.widelogevents)** — a more complete, battle-tested implementation.
+
+---
+
 ## The problem
 
 A single HTTP request typically produces:
@@ -48,8 +62,8 @@ One event. Full context.
 | Package | Description |
 |---|---|
 | `WideEvents.Abstractions` | `IWideEventContext` and `IWideEventExporter` contracts. |
-| `WideEvents.Core` | `WideEvent` static accumulator and `WideEventContext`. |
-| `WideEvents.AspNetCore` | Middleware that emits one wide event per HTTP request. |
+| `WideEvents.Core` | `WideEvent` static accumulator, `WideEventContext`, and `WideEventBuilder`. |
+| `WideEvents.AspNetCore` | Middleware, enrichers, and `LoggerWideEventExporter`. |
 
 Targets `net8.0` and `net10.0`.
 
@@ -69,13 +83,16 @@ dotnet add package WideEvents.Core
 
 ## Quick start (ASP.NET Core)
 
-Register the middleware and call `WideEvent.Add` anywhere in the request pipeline:
+Register the services, add the middleware, and call `WideEvent.Add` anywhere in the request pipeline:
 
 ```csharp
 using WideEvents.AspNetCore;
 using WideEvents.Core.Context;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddWideEvents(); // register services
+
 var app = builder.Build();
 
 app.UseWideEvents(); // emit one wide event per request
@@ -137,7 +154,7 @@ WideEvent.Reset();
 
 ## Structured log output
 
-The middleware logs via `ILogger` using `{@WideEvent}`. The default .NET console logger serializes dictionaries as `ToString()` — to get proper nested JSON you need a structured logger that supports destructuring, such as **Serilog**:
+The default exporter logs via `ILogger` using `{@WideEvent}`. The default .NET console logger serializes dictionaries as `ToString()` — to get proper nested JSON you need a structured logger that supports destructuring, such as **Serilog**:
 
 ```csharp
 builder.Host.UseSerilog((ctx, lc) => lc
@@ -148,9 +165,22 @@ A runnable sample with Serilog lives in [`sample/WideEvents.Sample.Api`](sample/
 
 ---
 
+## Enrichers
+
+`IHttpWideEventEnricher` lets you add fields from the HTTP context without modifying the middleware. `DefaultHttpEnricher` (registered automatically) captures `http.method`, `http.path`, and `http.status_code`. An optional `AuthEnricher` reads a configured claim from the authenticated user:
+
+```csharp
+builder.Services.AddWideEvents(options =>
+    options.UseAuthEnricher()); // writes user.id from ClaimTypes.NameIdentifier by default
+```
+
+Implement `IHttpWideEventEnricher` and register it with DI to add custom enrichers.
+
+---
+
 ## Custom exporters
 
-`IWideEventExporter` is the contract for custom destinations. It is not consumed by the middleware yet — today the middleware emits via `ILogger`. The interface exists so exporter packages can build against a stable contract:
+`IWideEventExporter` is the contract for custom destinations. The default `LoggerWideEventExporter` (registered by `AddWideEvents()`) emits via `ILogger`. Replace it by registering your own after calling `AddWideEvents()`:
 
 ```csharp
 public class MyExporter : IWideEventExporter
