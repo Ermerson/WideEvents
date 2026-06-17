@@ -5,6 +5,7 @@ using WideEvents.Abstractions;
 using WideEvents.AspNetCore.Enrichers;
 using WideEvents.Core.Builder;
 using WideEvents.Core.Context;
+using WideEvents.Core.Exporters;
 using WideEvents.Core.Logging;
 
 namespace WideEvents.AspNetCore;

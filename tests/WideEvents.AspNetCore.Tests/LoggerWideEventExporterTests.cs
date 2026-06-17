@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using WideEvents.Core.Exporters;
 using Xunit;
 
 namespace WideEvents.AspNetCore.Tests;
