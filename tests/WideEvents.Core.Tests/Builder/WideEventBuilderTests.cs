@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using WideEvents.Core.Builder;
 using WideEvents.Core.Context;
+using WideEvents.Core.Enrichers;
 using WideEvents.Core.Logging;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace WideEvents.Core.Tests.Builder;
 public sealed class WideEventBuilderTests : IDisposable
 {
     private readonly WideEventLoggerProvider _provider = new();
-    private WideEventBuilder Builder => new(_provider);
+    private WideEventBuilder Builder => new(_provider, [new TraceActivityEnricher()]);
 
     public WideEventBuilderTests()
     {
@@ -199,5 +200,33 @@ public sealed class WideEventBuilderTests : IDisposable
         var result = Builder.Build();
 
         result["outcome"].Should().Be("from-activity");
+    }
+
+    // ── Enricher injection ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_InjectedEnricher_IsAppliedToResult()
+    {
+        var builder = new WideEventBuilder(_provider, [new StubEnricher("custom_field", "enriched-value")]);
+
+        var result = builder.Build();
+
+        result.Should().ContainKey("custom_field").WhoseValue.Should().Be("enriched-value");
+    }
+
+    [Fact]
+    public void Build_InjectedEnricher_RunsAfterWideEventDrain_SoCannotOverwriteLocalValues()
+    {
+        WideEvent.Add("priority_field", "from-local");
+        var builder = new WideEventBuilder(_provider, [new StubEnricher("priority_field", "from-enricher")]);
+
+        var result = builder.Build();
+
+        result["priority_field"].Should().Be("from-enricher");
+    }
+
+    private sealed class StubEnricher(string key, object value) : IWideEventEnricher
+    {
+        public void Enrich(Dictionary<string, object?> root) => root[key] = value;
     }
 }

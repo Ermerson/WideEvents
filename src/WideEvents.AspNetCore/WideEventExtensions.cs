@@ -5,6 +5,7 @@ using WideEvents.Abstractions;
 using WideEvents.AspNetCore.Enrichers;
 using WideEvents.Core.Builder;
 using WideEvents.Core.Context;
+using WideEvents.Core.Enrichers;
 using WideEvents.Core.Exporters;
 using WideEvents.Core.Logging;
 
@@ -37,9 +38,14 @@ public static class WideEventExtensions
         services.AddSingleton<ILoggerProvider>(sp =>
             sp.GetRequiredService<WideEventLoggerProvider>());
 
-        // The builder reads the scope provider from WideEventLoggerProvider.
+        if (options.TraceEnricher)
+            services.AddSingleton<IWideEventEnricher, TraceActivityEnricher>();
+
+        // The builder merges scopes, Activity tags, and the AsyncLocal buffer, then applies enrichers.
         services.AddSingleton<IWideEventBuilder>(sp =>
-            new WideEventBuilder(sp.GetRequiredService<WideEventLoggerProvider>()));
+            new WideEventBuilder(
+                sp.GetRequiredService<WideEventLoggerProvider>(),
+                sp.GetServices<IWideEventEnricher>()));
 
         services.AddSingleton<IHttpWideEventEnricher, DefaultHttpEnricher>();
         services.AddSingleton<IWideEventExporter, LoggerWideEventExporter>();

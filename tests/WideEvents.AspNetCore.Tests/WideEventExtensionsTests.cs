@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WideEvents.AspNetCore.Enrichers;
 using WideEvents.Core.Builder;
 using WideEvents.Core.Context;
+using WideEvents.Core.Enrichers;
 using WideEvents.Core.Logging;
 using Xunit;
 
@@ -96,5 +97,31 @@ public sealed class WideEventExtensionsTests
 
         var provider = services.BuildServiceProvider();
         provider.GetService<IWideEventBuilder>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddWideEvents_WithoutOptions_DoesNotRegisterTraceEnricher()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddWideEvents();
+
+        var provider = services.BuildServiceProvider();
+        var enrichers = provider.GetServices<IWideEventEnricher>();
+        enrichers.Should().NotContain(e => e is TraceActivityEnricher);
+    }
+
+    [Fact]
+    public void AddWideEvents_WithUseTraceEnricher_RegistersTraceEnricher()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddWideEvents(o => o.UseTraceEnricher());
+
+        var provider = services.BuildServiceProvider();
+        var enrichers = provider.GetServices<IWideEventEnricher>();
+        enrichers.Should().Contain(e => e is TraceActivityEnricher);
     }
 }

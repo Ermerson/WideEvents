@@ -1,70 +1,72 @@
 using System.Diagnostics;
 using WideEvents.Core.Context;
+using WideEvents.Core.Enrichers;
 using WideEvents.Core.Logging;
 
 namespace WideEvents.Core.Builder;
 
 /// <summary>
 /// Default <see cref="IWideEventBuilder"/> implementation.
-/// Merges three data sources in ascending precedence order:
+/// Merges data sources in ascending precedence order:
 /// <list type="number">
 ///   <item>
 ///     Scope values — captured at log-call time (includes disposed scopes) plus any
 ///     scopes still active at build time via <c>IExternalScopeProvider.ForEachScope()</c>.
 ///   </item>
-///   <item><see cref="Activity.Current"/> trace IDs and tags</item>
-///   <item><see cref="WideEvent.Drain()"/> AsyncLocal buffer (highest priority)</item>
+///   <item><see cref="System.Diagnostics.Activity.Current"/> tag objects.</item>
+///   <item><see cref="WideEvent.Drain()"/> AsyncLocal buffer.</item>
+///   <item>Enrichers — applied to the nested result after structure building (highest priority).</item>
 /// </list>
-/// The merged flat dictionary is then expanded by <see cref="WideEventStructureBuilder"/>
-/// into a nested hierarchy.
+/// The merged flat dictionary is expanded by <see cref="WideEventStructureBuilder"/> into a
+/// nested hierarchy before enrichers run.
 /// </summary>
 public sealed class WideEventBuilder : IWideEventBuilder
 {
     private readonly WideEventLoggerProvider _provider;
+    private readonly IReadOnlyList<IWideEventEnricher> _enrichers;
 
-    /// <summary>Initializes the builder with the provider that holds the active scope provider.</summary>
-    public WideEventBuilder(WideEventLoggerProvider provider)
-        => _provider = provider;
+    /// <summary>
+    /// Initializes the builder with the provider that holds the active scope provider
+    /// and the enrichers applied after the event is built.
+    /// </summary>
+    public WideEventBuilder(WideEventLoggerProvider provider, IEnumerable<IWideEventEnricher> enrichers)
+    {
+        _provider = provider;
+        _enrichers = enrichers.ToList();
+    }
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, object?> Build()
     {
         var flat = new Dictionary<string, object?>();
 
-        // 1a. Scope values captured at log-call time — lowest precedence.
-        // Covers scopes already disposed before Build() runs, as long as at least
-        // one log call occurred while the scope was active.
         foreach (var (key, value) in _provider.DrainCapturedScopes())
             flat[key] = value;
 
-        // 1b. Scope values still active at build time — same precedence layer.
-        // Catches long-lived scopes (middleware, framework) even without a log call.
-        _provider.ScopeProvider.ForEachScope(
-            (scope, state) =>
+        _provider.ScopeProvider.ForEachScope((scope, state) =>
             {
-                if (scope is IEnumerable<KeyValuePair<string, object?>> kvps)
-                    foreach (var kvp in kvps)
-                        if (kvp.Value is not null)
-                            state[kvp.Key] = kvp.Value;
+                if (scope is not IEnumerable<KeyValuePair<string, object?>> kvps) return;
+
+                foreach (var kvp in kvps)
+                    if (kvp.Value is not null)
+                        state[kvp.Key] = kvp.Value;
             },
             flat);
 
-        // 2. Activity data — middle precedence
         var activity = Activity.Current;
         if (activity is not null)
-        {
-            flat["trace_id"] = activity.TraceId.ToString();
-            flat["span_id"] = activity.SpanId.ToString();
-            flat["trace_flags"] = activity.ActivityTraceFlags.ToString();
             foreach (var tag in activity.TagObjects)
                 if (tag.Value is not null)
                     flat[tag.Key] = tag.Value;
-        }
 
-        // 3. WideEvent AsyncLocal buffer — highest precedence; also clears the context
         foreach (var (key, value) in WideEvent.Drain())
             flat[key] = value;
 
-        return WideEventStructureBuilder.Build(flat);
+        var result = WideEventStructureBuilder.Build(flat);
+
+        foreach (var enricher in _enrichers)
+            enricher.Enrich(result);
+
+        return result;
     }
 }
