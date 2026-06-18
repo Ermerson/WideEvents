@@ -55,12 +55,24 @@ public sealed class WideEventMiddleware
         try
         {
             foreach (var enricher in _enrichers)
-                enricher.EnrichRequest(context, wideEvent);
+            {
+                try { enricher.EnrichRequest(context, wideEvent); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "WideEvents: {Enricher}.EnrichRequest failed.", enricher.GetType().Name);
+                }
+            }
 
             await _next(context);
 
             foreach (var enricher in _enrichers)
-                enricher.EnrichResponse(context, wideEvent);
+            {
+                try { enricher.EnrichResponse(context, wideEvent); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "WideEvents: {Enricher}.EnrichResponse failed.", enricher.GetType().Name);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -72,7 +84,14 @@ public sealed class WideEventMiddleware
         {
             wideEvent.Add("duration_ms", Stopwatch.GetElapsedTime(start).TotalMilliseconds);
             var built = _builder.Build();
-            await _exporter.ExportAsync(built, context.RequestAborted);
+            try
+            {
+                await _exporter.ExportAsync(built, context.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "WideEvents: exporter failed to export event.");
+            }
         }
     }
 }
