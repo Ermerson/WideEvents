@@ -47,11 +47,8 @@ public sealed class WideEventMiddleware
     /// </summary>
     public async Task Invoke(HttpContext context, IWideEventContext wideEvent)
     {
-        var requestScope = new Dictionary<string, object?>
-        {
-            ["http.method"] = context.Request.Method,
-            ["http.path"] = context.Request.Path.Value,
-        };
+        var requestScope = new Dictionary<string, object?>();
+        
         using var scope = _logger.BeginScope(requestScope);
         var start = Stopwatch.GetTimestamp();
 
