@@ -13,7 +13,17 @@ namespace WideEvents.Core.Logging;
 public sealed class WideEventLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
     private readonly AsyncLocal<Dictionary<string, object?>?> _capturedScopes = new();
+    private readonly LogLevel _minimumLevel;
     private IExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
+
+    /// <param name="minimumLevel">
+    /// Minimum log level at which scope data is captured. Defaults to
+    /// <see cref="LogLevel.Information"/>.
+    /// </param>
+    public WideEventLoggerProvider(LogLevel minimumLevel = LogLevel.Information)
+    {
+        _minimumLevel = minimumLevel;
+    }
 
     /// <inheritdoc/>
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
@@ -38,7 +48,7 @@ public sealed class WideEventLoggerProvider : ILoggerProvider, ISupportExternalS
 
     /// <inheritdoc/>
     public ILogger CreateLogger(string categoryName)
-        => new WideEventLogger(_scopeProvider, _capturedScopes);
+        => new WideEventLogger(_scopeProvider, _capturedScopes, _minimumLevel);
 
     /// <inheritdoc/>
     public void Dispose() { }

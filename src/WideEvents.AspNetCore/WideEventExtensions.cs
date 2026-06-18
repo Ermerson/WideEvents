@@ -34,7 +34,7 @@ public static class WideEventExtensions
 
         // Register the provider as a singleton, then also as ILoggerProvider so the logging
         // infrastructure calls SetScopeProvider() on it, sharing the external scope.
-        services.AddSingleton<WideEventLoggerProvider>();
+        services.AddSingleton<WideEventLoggerProvider>(_ => new WideEventLoggerProvider(options.MinimumCaptureLevel));
         services.AddSingleton<ILoggerProvider>(sp =>
             sp.GetRequiredService<WideEventLoggerProvider>());
 

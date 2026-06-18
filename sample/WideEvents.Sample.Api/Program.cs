@@ -28,10 +28,13 @@ builder.Logging.AddSerilog(new LoggerConfiguration()
     .WriteTo.Console(new PrettyJsonFormatter())
     .CreateLogger(), dispose: true);
 
-builder.Services.AddWideEvents(options => 
+builder.Services.AddWideEvents(options =>
+{
     options
         .UseAuthEnricher()
-        .UseTraceEnricher());
+        .UseTraceEnricher();
+    options.MinimumCaptureLevel = LogLevel.Information;
+});
 
 var app = builder.Build();
 

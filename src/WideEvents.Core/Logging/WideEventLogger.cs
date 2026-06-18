@@ -13,13 +13,16 @@ internal sealed class WideEventLogger : ILogger
 {
     private readonly IExternalScopeProvider _scopeProvider;
     private readonly AsyncLocal<Dictionary<string, object?>?> _store;
+    private readonly LogLevel _minimumLevel;
 
     internal WideEventLogger(
         IExternalScopeProvider scopeProvider,
-        AsyncLocal<Dictionary<string, object?>?> store)
+        AsyncLocal<Dictionary<string, object?>?> store,
+        LogLevel minimumLevel)
     {
         _scopeProvider = scopeProvider;
         _store = store;
+        _minimumLevel = minimumLevel;
     }
 
     /// <inheritdoc/>
@@ -27,7 +30,7 @@ internal sealed class WideEventLogger : ILogger
         => _scopeProvider.Push(state);
 
     /// <inheritdoc/>
-    public bool IsEnabled(LogLevel logLevel) => true;
+    public bool IsEnabled(LogLevel logLevel) => logLevel >= _minimumLevel;
 
     /// <inheritdoc/>
     public void Log<TState>(

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using WideEvents.AspNetCore.Enrichers;
 
 namespace WideEvents.AspNetCore;
@@ -7,6 +8,23 @@ public sealed class WideEventsOptions
 {
     internal AuthEnricherOptions? AuthEnricher { get; private set; }
     internal bool TraceEnricher { get; private set; }
+
+    /// <summary>
+    /// Minimum log level at which scope key-value pairs are captured into the wide event.
+    /// Log calls below this level are ignored by <see cref="WideEvents.Core.Logging.WideEventLogger"/>.
+    /// Defaults to <see cref="LogLevel.Information"/>.
+    /// </summary>
+    public LogLevel MinimumCaptureLevel { get; set; } = LogLevel.Information;
+
+    /// <summary>
+    /// Sets the minimum <see cref="LogLevel"/> at which scope data is captured into the wide event.
+    /// Log calls at a lower level will not trigger scope collection.
+    /// </summary>
+    public WideEventsOptions SetMinimumCaptureLevel(LogLevel level)
+    {
+        MinimumCaptureLevel = level;
+        return this;
+    }
 
     /// <summary>
     /// Enables the <see cref="AuthEnricher"/> and optionally configures which claim and
