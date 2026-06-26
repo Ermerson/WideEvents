@@ -31,5 +31,7 @@ public interface IHttpWideEventEnricher
     /// Called after the next middleware returns on the success path only.
     /// Not invoked when the pipeline throws an unhandled exception.
     /// </summary>
-    void EnrichResponse(HttpContext context, IWideEventContext wideEvent);
+    void EnrichResponse(HttpContext context, IWideEventContext wideEvent)
+    {
+    }
 }

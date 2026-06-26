@@ -16,7 +16,4 @@ public sealed class AuthEnricher(AuthEnricherOptions options) : IHttpWideEventEn
         var value = context.User?.FindFirst(options.ClaimType)?.Value;
         wideEvent.Add(options.FieldName, value);
     }
-
-    /// <inheritdoc/>
-    public void EnrichResponse(HttpContext context, IWideEventContext wideEvent) { }
 }

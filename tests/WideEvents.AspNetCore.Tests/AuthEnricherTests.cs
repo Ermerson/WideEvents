@@ -72,7 +72,7 @@ public sealed class AuthEnricherTests
     [Fact]
     public void EnrichResponse_DoesNotAddAnyField()
     {
-        var enricher = new AuthEnricher(new AuthEnricherOptions());
+        IHttpWideEventEnricher enricher = new AuthEnricher(new AuthEnricherOptions());
         var wideEvent = new WideEventContext(enrichers: []);
 
         enricher.EnrichResponse(new DefaultHttpContext(), wideEvent);
