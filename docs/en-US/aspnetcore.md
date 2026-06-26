@@ -85,6 +85,18 @@ public class TenantEnricher : IHttpWideEventEnricher
 builder.Services.AddSingleton<IHttpWideEventEnricher, TenantEnricher>();
 ```
 
+### Enricher lifecycle contract
+
+> **Note:** `EnrichResponse` is called only on the **success path** — when the
+> pipeline completes without throwing. If an unhandled exception propagates,
+> `EnrichResponse` is **not invoked**; the middleware captures `error.type` and
+> `error.message` directly and re-throws.
+>
+> If your enricher needs to add data regardless of the request outcome, do it in
+> `EnrichRequest`, or read the required state defensively (for example, avoid
+> accessing `context.Response.StatusCode` inside `EnrichResponse` assuming it is
+> always set).
+
 ### Built-in enrichers
 
 **`DefaultHttpEnricher`** is registered automatically by `AddWideEvents()`. It
