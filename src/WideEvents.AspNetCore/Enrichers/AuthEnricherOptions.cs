@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using WideEvents.Core.Constants;
 
 namespace WideEvents.AspNetCore.Enrichers;
 
@@ -9,5 +10,5 @@ public sealed class AuthEnricherOptions
     public string ClaimType { get; set; } = ClaimTypes.NameIdentifier;
 
     /// <summary>Wide-event field name where the claim value is written. Defaults to <c>"user.id"</c>.</summary>
-    public string FieldName { get; set; } = "user.id";
+    public string FieldName { get; set; } = WideEventFieldNames.UserId;
 }

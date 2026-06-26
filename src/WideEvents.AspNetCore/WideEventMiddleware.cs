@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using WideEvents.Abstractions;
 using WideEvents.Core.Builder;
+using WideEvents.Core.Constants;
 using WideEvents.Core.Context;
 
 namespace WideEvents.AspNetCore;
@@ -76,13 +77,13 @@ public sealed class WideEventMiddleware
         }
         catch (Exception ex)
         {
-            wideEvent.Add("error.type", ex.GetType().Name);
-            wideEvent.Add("error.message", ex.Message);
+            wideEvent.Add(WideEventFieldNames.ErrorType, ex.GetType().Name);
+            wideEvent.Add(WideEventFieldNames.ErrorMessage, ex.Message);
             throw;
         }
         finally
         {
-            wideEvent.Add("duration_ms", Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            wideEvent.Add(WideEventFieldNames.DurationInMillisecond, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
             var built = _builder.Build();
             try
             {

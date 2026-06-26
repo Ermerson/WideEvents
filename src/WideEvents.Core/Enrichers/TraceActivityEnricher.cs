@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using WideEvents.Core.Constants;
 
 namespace WideEvents.Core.Enrichers;
 
@@ -14,8 +15,8 @@ public sealed class TraceActivityEnricher : IWideEventEnricher
         var activity = Activity.Current;
         if (activity is null) return;
 
-        root["trace_id"] = activity.TraceId.ToString();
-        root["span_id"] = activity.SpanId.ToString();
-        root["trace_flags"] = activity.ActivityTraceFlags.ToString();
+        root[WideEventFieldNames.TraceId] = activity.TraceId.ToString();
+        root[WideEventFieldNames.SpanId] = activity.SpanId.ToString();
+        root[WideEventFieldNames.TraceFlags] = activity.ActivityTraceFlags.ToString();
     }
 }
