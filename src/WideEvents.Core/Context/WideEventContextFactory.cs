@@ -5,7 +5,7 @@ namespace WideEvents.Core.Context;
 
 internal static class WideEventContextFactory
 {
-    private static Func<IWideEventContext> _factory =
+    private static volatile Func<IWideEventContext> _factory =
         static () => new WideEventContext([new TraceActivityEnricher()]);
 
     internal static void SetFactory(Func<IWideEventContext> factory)

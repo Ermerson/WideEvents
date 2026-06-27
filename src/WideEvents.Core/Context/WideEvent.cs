@@ -24,8 +24,9 @@ public static class WideEvent
 
     /// <summary>
     /// Replaces the factory used to create new contexts.
-    /// Useful in tests to substitute a custom <see cref="IWideEventContext"/> implementation.
+    /// Intended for test use only — allows substituting a custom <see cref="IWideEventContext"/> implementation.
     /// </summary>
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public static void SetFactory(Func<IWideEventContext> factory)
         => WideEventContextFactory.SetFactory(factory);
 
