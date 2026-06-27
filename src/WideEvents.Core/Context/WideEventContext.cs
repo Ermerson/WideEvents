@@ -17,13 +17,12 @@ public sealed class WideEventContext : IWideEventContext, IEnumerable<KeyValuePa
     private readonly IReadOnlyList<IWideEventEnricher> _enrichers;
 
     /// <summary>
-    /// Creates a new context, optionally supplying a custom set of enrichers.
-    /// When <paramref name="enrichers"/> is <see langword="null"/>, defaults to
-    /// <see cref="TraceActivityEnricher"/>.
+    /// Creates a new context with an optional set of enrichers applied during <see cref="Build"/>.
+    /// When <paramref name="enrichers"/> is <see langword="null"/>, no enrichers are applied.
+    /// The default enrichers for standalone use are configured in <see cref="WideEventContextFactory"/>.
     /// </summary>
     public WideEventContext(IEnumerable<IWideEventEnricher>? enrichers = null)
-        => _enrichers = enrichers?.ToList()
-            ?? new List<IWideEventEnricher> { new TraceActivityEnricher() };
+        => _enrichers = enrichers?.ToList() ?? [];
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is null or whitespace.</exception>

@@ -170,7 +170,7 @@ public sealed class WideEventContextTests
         activity.SetIdFormat(ActivityIdFormat.W3C);
         activity.Start();
 
-        var context = new WideEventContext();
+        var context = new WideEventContext([new TraceActivityEnricher()]);
         context.Add("outcome", "ok");
 
         var built = context.Build();
