@@ -64,6 +64,25 @@ Because the context is `AsyncLocal`, these calls land on the current request's
 event. The context is cleared when the middleware finishes (after `Build()` is
 called), so contexts do not leak between requests.
 
+### Logger scope integration
+
+`WideEventLoggerProvider` also captures key-value pairs pushed via `ILogger`
+scopes. Any scope opened with a `Dictionary<string, object?>` is automatically
+merged into the event the moment a log call fires inside it:
+
+```csharp
+using (_logger.BeginScope(new Dictionary<string, object?> { ["checkout.step"] = "payment" }))
+{
+    _logger.LogInformation("Processing payment..."); // triggers scope capture
+    // ...
+}
+```
+
+> **Important:** A scope opened but **disposed without any log call** inside it
+> will **not appear** in the final event. Capture happens at log-call time, not
+> when the scope is opened or closed. If you need a field to be present
+> regardless of whether any log entry is written, use `WideEvent.Add()` directly.
+
 ## Enrichers
 
 `IHttpWideEventEnricher` is the extension point for adding HTTP-derived fields

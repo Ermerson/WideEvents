@@ -64,6 +64,27 @@ Como o contexto é `AsyncLocal`, essas chamadas caem no evento da requisição a
 O contexto é limpo quando o middleware termina (após `Build()` ser chamado), então
 os contextos não vazam entre requisições.
 
+### Integração com logger scopes
+
+`WideEventLoggerProvider` também captura pares chave-valor enviados via scopes do
+`ILogger`. Qualquer scope aberto com um `Dictionary<string, object?>` é
+automaticamente mesclado no evento no momento em que ocorre uma chamada de log
+dentro dele:
+
+```csharp
+using (_logger.BeginScope(new Dictionary<string, object?> { ["checkout.step"] = "payment" }))
+{
+    _logger.LogInformation("Processando pagamento..."); // dispara a captura do scope
+    // ...
+}
+```
+
+> **Atenção:** Um scope aberto e **descartado sem nenhuma chamada de log** dentro
+> dele **não aparecerá** no evento final. A captura ocorre no momento da chamada de
+> log, não quando o scope é aberto ou fechado. Se você precisa garantir que um campo
+> esteja presente independentemente de haver entradas de log, use `WideEvent.Add()`
+> diretamente.
+
 ## Enrichers
 
 `IHttpWideEventEnricher` é o ponto de extensão para adicionar campos derivados do
