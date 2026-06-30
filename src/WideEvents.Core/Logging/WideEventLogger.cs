@@ -40,6 +40,7 @@ internal sealed class WideEventLogger : ILogger
         Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
+        if (!IsEnabled(logLevel)) return;
         _store.Value ??= new Dictionary<string, object?>();
         _scopeProvider.ForEachScope(
             (scope, dict) =>
